@@ -1,0 +1,318 @@
+{
+  "model": "TF-IDF (1-2 grams) + multinomial logistic regression",
+  "trained_at": "2026-10-02T07:40:45Z",
+  "versions": {
+    "python": "3.14.5",
+    "scikit_learn": "1.9.1",
+    "numpy": "2.5.3"
+  },
+  "dataset": {
+    "source": "maintainer-labelled public GitHub issues (see scripts/fetch_dataset.py)",
+    "manifest_sha256": "bde055ed24f5c56e6bce1d5a9d9cfa6e5c15917e79ed3f7194bfcaab9283484b",
+    "issues": 3706,
+    "duplicates_removed": 1,
+    "class_counts": {
+      "documentation": 863,
+      "feature": 980,
+      "question": 873,
+      "bug": 990
+    },
+    "repos": {
+      "denoland/deno": 369,
+      "microsoft/TypeScript": 394,
+      "microsoft/terminal": 349,
+      "pandas-dev/pandas": 394,
+      "psf/black": 325,
+      "pydantic/pydantic": 374,
+      "pypa/pip": 368,
+      "pytest-dev/pytest": 376,
+      "python-poetry/poetry": 392,
+      "tauri-apps/tauri": 365
+    }
+  },
+  "training": {
+    "seed": 42,
+    "test_size": 0.2,
+    "train": 2964,
+    "test": 742,
+    "cv_folds": 5,
+    "C": 4.0,
+    "cv_macro_f1_by_C": {
+      "0.5": 0.7281097919697379,
+      "1.0": 0.7396165416203522,
+      "2.0": 0.7417828015577312,
+      "4.0": 0.7487042369411915,
+      "8.0": 0.7484959292603619,
+      "16.0": 0.7472319847637751
+    },
+    "vectorizer_params": {
+      "ngram_range": [
+        1,
+        2
+      ],
+      "min_df": 2,
+      "max_df": 0.9,
+      "max_features": 50000,
+      "sublinear_tf": true,
+      "strip_accents": "unicode"
+    },
+    "class_weight": "balanced"
+  },
+  "evaluation": {
+    "test": {
+      "n": 742,
+      "accuracy": 0.7681940700808625,
+      "macro_precision": 0.769742598716015,
+      "macro_recall": 0.7645357402025446,
+      "macro_f1": 0.7659105467048972,
+      "per_class": {
+        "bug": {
+          "precision": 0.75,
+          "recall": 0.803030303030303,
+          "f1": 0.775609756097561,
+          "support": 198
+        },
+        "feature": {
+          "precision": 0.8028846153846154,
+          "recall": 0.8520408163265306,
+          "f1": 0.8267326732673267,
+          "support": 196
+        },
+        "documentation": {
+          "precision": 0.869281045751634,
+          "recall": 0.7687861271676301,
+          "f1": 0.8159509202453987,
+          "support": 173
+        },
+        "question": {
+          "precision": 0.6568047337278107,
+          "recall": 0.6342857142857142,
+          "f1": 0.6453488372093024,
+          "support": 175
+        }
+      },
+      "labels": [
+        "bug",
+        "feature",
+        "documentation",
+        "question"
+      ],
+      "confusion_matrix": [
+        [
+          159,
+          8,
+          3,
+          28
+        ],
+        [
+          11,
+          167,
+          6,
+          12
+        ],
+        [
+          10,
+          12,
+          133,
+          18
+        ],
+        [
+          32,
+          21,
+          11,
+          111
+        ]
+      ]
+    },
+    "rules_baseline_test": {
+      "n": 742,
+      "accuracy": 0.5579514824797843,
+      "macro_precision": 0.5835604414973962,
+      "macro_recall": 0.5459344506763995,
+      "macro_f1": 0.5271788496037423,
+      "per_class": {
+        "bug": {
+          "precision": 0.45321637426900585,
+          "recall": 0.7828282828282829,
+          "f1": 0.5740740740740741,
+          "support": 198
+        },
+        "feature": {
+          "precision": 0.6289592760180995,
+          "recall": 0.7091836734693877,
+          "f1": 0.6666666666666666,
+          "support": 196
+        },
+        "documentation": {
+          "precision": 0.7520661157024794,
+          "recall": 0.5260115606936416,
+          "f1": 0.6190476190476191,
+          "support": 173
+        },
+        "question": {
+          "precision": 0.5,
+          "recall": 0.1657142857142857,
+          "f1": 0.24892703862660945,
+          "support": 175
+        }
+      },
+      "labels": [
+        "bug",
+        "feature",
+        "documentation",
+        "question"
+      ],
+      "confusion_matrix": [
+        [
+          155,
+          24,
+          9,
+          10
+        ],
+        [
+          39,
+          139,
+          8,
+          10
+        ],
+        [
+          43,
+          30,
+          91,
+          9
+        ],
+        [
+          105,
+          28,
+          13,
+          29
+        ]
+      ]
+    },
+    "coverage_at_thresholds": [
+      {
+        "threshold": 0.4,
+        "coverage": 0.9110512129380054,
+        "accuracy": 0.8047337278106509
+      },
+      {
+        "threshold": 0.5,
+        "coverage": 0.7331536388140162,
+        "accuracy": 0.8584558823529411
+      },
+      {
+        "threshold": 0.6,
+        "coverage": 0.5889487870619946,
+        "accuracy": 0.8947368421052632
+      },
+      {
+        "threshold": 0.7,
+        "coverage": 0.45148247978436656,
+        "accuracy": 0.9343283582089552
+      },
+      {
+        "threshold": 0.8,
+        "coverage": 0.28975741239892183,
+        "accuracy": 0.9720930232558139
+      }
+    ],
+    "leave_one_repo_out": [
+      {
+        "repo": "denoland/deno",
+        "n": 369,
+        "ml_accuracy": 0.5745257452574526,
+        "ml_macro_f1": 0.5739599139052706,
+        "rules_macro_f1": 0.4348364493429581
+      },
+      {
+        "repo": "microsoft/TypeScript",
+        "n": 394,
+        "ml_accuracy": 0.6218274111675127,
+        "ml_macro_f1": 0.6016055959262719,
+        "rules_macro_f1": 0.44878962679647205
+      },
+      {
+        "repo": "microsoft/terminal",
+        "n": 349,
+        "ml_accuracy": 0.6991404011461319,
+        "ml_macro_f1": 0.6633894574667106,
+        "rules_macro_f1": 0.4970554153372383
+      },
+      {
+        "repo": "pandas-dev/pandas",
+        "n": 394,
+        "ml_accuracy": 0.8451776649746193,
+        "ml_macro_f1": 0.8378535653156622,
+        "rules_macro_f1": 0.7696198583241303
+      },
+      {
+        "repo": "psf/black",
+        "n": 325,
+        "ml_accuracy": 0.7784615384615384,
+        "ml_macro_f1": 0.748995150782606,
+        "rules_macro_f1": 0.5845717612722051
+      },
+      {
+        "repo": "pydantic/pydantic",
+        "n": 374,
+        "ml_accuracy": 0.5775401069518716,
+        "ml_macro_f1": 0.5760711198913445,
+        "rules_macro_f1": 0.45808515487842555
+      },
+      {
+        "repo": "pypa/pip",
+        "n": 368,
+        "ml_accuracy": 0.5815217391304348,
+        "ml_macro_f1": 0.5855479597144927,
+        "rules_macro_f1": 0.41973558040237374
+      },
+      {
+        "repo": "pytest-dev/pytest",
+        "n": 376,
+        "ml_accuracy": 0.6037234042553191,
+        "ml_macro_f1": 0.5943418496124566,
+        "rules_macro_f1": 0.414828431372549
+      },
+      {
+        "repo": "python-poetry/poetry",
+        "n": 392,
+        "ml_accuracy": 0.6530612244897959,
+        "ml_macro_f1": 0.6314351697551186,
+        "rules_macro_f1": 0.4357057595551319
+      },
+      {
+        "repo": "tauri-apps/tauri",
+        "n": 365,
+        "ml_accuracy": 0.7780821917808219,
+        "ml_macro_f1": 0.7658095666249337,
+        "rules_macro_f1": 0.6668664598613484
+      }
+    ],
+    "leave_one_repo_out_mean_macro_f1": 0.6579009348994866,
+    "leave_one_repo_out_mean_rules_macro_f1": 0.5130094497142833
+  },
+  "format_version": 1,
+  "preprocess_version": 1,
+  "vectorizer": {
+    "lowercase": true,
+    "strip_accents": "unicode",
+    "token_pattern": "(?u)\\b\\w\\w+\\b",
+    "ngram_range": [
+      1,
+      2
+    ],
+    "sublinear_tf": true,
+    "norm": "l2",
+    "use_idf": true,
+    "smooth_idf": true
+  },
+  "classes": [
+    "bug",
+    "documentation",
+    "feature",
+    "question"
+  ],
+  "vocabulary_size": 47128,
+  "weights_file": "issue_classifier.npz",
+  "weights_sha256": "ed89551fbd08df576913324989c31147731d5bfb993d52b6d2a8903e26c24ba4"
+}

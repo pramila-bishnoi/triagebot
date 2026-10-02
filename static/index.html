@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>TriageBot</title>
-  <link rel="icon" href="/static/KIIT-logo-HD.png" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2322c55e'/%3E%3Cpath d='M9 16.5l4.5 4.5L23 11.5' stroke='white' stroke-width='3.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
   <style>
     /* ---------- Design tokens ---------- */
     :root, [data-theme="dark"] {
@@ -19,6 +19,7 @@
       --muted: #98a2c0;
       --accent: #22c55e;
       --accent-strong: #16a34a;
+      --danger: #ef4444;
       --pill-active-bg: #ffffff;
       --pill-active-text: #0a0e1a;
       --card-shadow: 0 12px 34px rgba(0, 0, 0, 0.45);
@@ -26,6 +27,7 @@
       --glow: 0 6px 22px rgba(34, 197, 94, 0.45);
       --pill-hover-shadow: 0 6px 20px rgba(255, 255, 255, 0.18);
       --input-bg: #1a2138;
+      color-scheme: dark;
     }
     [data-theme="light"] {
       --bg: #eef1f7;
@@ -39,6 +41,7 @@
       --muted: #5b6478;
       --accent: #16a34a;
       --accent-strong: #15803d;
+      --danger: #dc2626;
       --pill-active-bg: #0f1626;
       --pill-active-text: #ffffff;
       --card-shadow: 0 10px 28px rgba(19, 30, 60, 0.10);
@@ -46,6 +49,7 @@
       --glow: 0 6px 22px rgba(22, 163, 74, 0.35);
       --pill-hover-shadow: 0 6px 20px rgba(15, 22, 38, 0.16);
       --input-bg: #f4f6fb;
+      color-scheme: light;
     }
 
     * { box-sizing: border-box; }
@@ -62,6 +66,8 @@
       min-height: 100vh;
       transition: background-color 0.35s ease, color 0.35s ease;
     }
+    a { color: inherit; }
+    [hidden] { display: none !important; }
 
     /* ---------- Top navbar ---------- */
     .nav {
@@ -72,8 +78,11 @@
       backdrop-filter: blur(14px);
       border-bottom: 1px solid var(--border);
     }
-    .brand { display: flex; align-items: center; gap: 12px; }
-    .brand img { height: 38px; width: auto; display: block; }
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .brand-mark {
+      width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center;
+      background: linear-gradient(135deg, var(--accent), #6366f1); color: #fff;
+    }
     .brand .name {
       font-weight: 800; font-size: 1.15rem; letter-spacing: 0.2px;
       background: linear-gradient(90deg, var(--accent), #6366f1);
@@ -89,7 +98,6 @@
       text-decoration: none; cursor: pointer; border: none; background: transparent;
       transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, color 0.18s ease;
     }
-    /* Shadow hover like the "Home" pill button */
     .nav-pill:hover {
       background: color-mix(in srgb, var(--panel-3) 80%, transparent);
       color: var(--text);
@@ -110,51 +118,32 @@
       transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
     }
     .icon-btn:hover { transform: translateY(-1px); box-shadow: var(--pill-hover-shadow); }
-    .user-chip {
-      display: flex; align-items: center; gap: 9px;
-      padding: 5px 6px 5px 12px; border-radius: 999px;
-      background: var(--panel-2); border: 1px solid var(--border);
-    }
-    .user-chip .uname { font-size: 0.85rem; font-weight: 600; }
-    .avatar {
-      width: 30px; height: 30px; border-radius: 999px; display: grid; place-items: center;
-      font-weight: 800; font-size: 0.8rem; color: #fff;
-      background: linear-gradient(135deg, var(--accent), #6366f1);
-    }
-    .logout {
-      border: none; background: transparent; color: var(--muted); cursor: pointer;
-      font-size: 0.82rem; padding: 6px 10px; border-radius: 8px;
-    }
-    .logout:hover { color: var(--text); }
 
     /* ---------- Layout ---------- */
-    .wrap { max-width: 860px; margin: 0 auto; padding: 26px 20px 70px; }
+    .wrap { max-width: 1120px; margin: 0 auto; padding: 26px 20px 70px; }
+    .wrap.narrow { max-width: 860px; }
     .hero { text-align: center; margin-bottom: 22px; }
     .hero h1 { margin: 0; font-size: 1.9rem; font-weight: 800; }
     .hero p { color: var(--muted); margin: 8px 0 0; }
 
-    /* ---------- Cards ---------- */
+    /* ---------- Cards & forms ---------- */
     .card {
       background: var(--panel);
       border: 1px solid var(--border);
       border-radius: 18px;
       padding: 22px;
       box-shadow: var(--card-shadow);
-      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
     }
     .card.compose { margin-bottom: 22px; }
 
     label { display: block; font-size: 0.82rem; color: var(--muted); margin: 10px 0 6px; font-weight: 600; }
-    input, textarea {
+    input, textarea, select {
       width: 100%; background: var(--input-bg); border: 1px solid var(--border);
       border-radius: 12px; color: var(--text); padding: 12px 14px; font-size: 0.95rem;
+      font-family: inherit; min-width: 0;
       transition: border-color 0.18s ease, box-shadow 0.18s ease;
     }
-    select {
-      width: 100%; background: var(--input-bg); border: 1px solid var(--border);
-      border-radius: 12px; color: var(--text); padding: 12px 14px; font-size: 0.95rem;
-      cursor: pointer; transition: border-color 0.18s ease, box-shadow 0.18s ease;
-    }
+    select { cursor: pointer; }
     input:focus, textarea:focus, select:focus {
       outline: none; border-color: var(--accent);
       box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
@@ -165,24 +154,106 @@
       margin-top: 14px; cursor: pointer; border: none; border-radius: 12px;
       padding: 12px 20px; font-weight: 700; font-size: 0.95rem; color: #fff;
       background: linear-gradient(90deg, var(--accent), var(--accent-strong));
-      transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+      transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease, opacity 0.18s;
     }
     .btn:hover { transform: translateY(-2px); box-shadow: var(--glow); filter: saturate(1.1); }
     .btn:active { transform: translateY(0); }
-    .btn.block { width: 100%; }
+    .btn:disabled { opacity: 0.6; cursor: progress; transform: none; box-shadow: none; }
+    .btn.ghost {
+      background: transparent; color: var(--muted); border: 1px solid var(--border);
+      padding: 9px 14px; font-weight: 600; margin-top: 0;
+    }
+    .btn.ghost:hover { color: var(--text); box-shadow: var(--pill-hover-shadow); }
 
+    .import-row { display: grid; grid-template-columns: minmax(0, 1fr) 130px 110px auto; gap: 12px; align-items: end; }
+    .import-row .btn { margin-top: 0; height: 46px; }
+    .import-row label { margin-top: 0; }
+    .hint { font-size: 0.78rem; color: var(--muted); margin-top: 10px; }
+
+    .status { margin-top: 12px; font-size: 0.88rem; padding: 10px 14px; border-radius: 12px; }
+    .status.ok { color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent);
+                 border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); }
+    .status.err { color: var(--danger); background: color-mix(in srgb, var(--danger) 10%, transparent);
+                  border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent); }
+    .status.info { color: var(--muted); background: var(--panel-2); border: 1px solid var(--border); }
+
+    .filters {
+      display: grid; grid-template-columns: minmax(0, 1.3fr) repeat(5, minmax(0, 1fr)); gap: 10px;
+      margin: 26px 0 12px; align-items: end;
+    }
+    .filters label { margin: 0 0 5px; font-size: 0.74rem; }
+    .filters .f-search { grid-column: span 5; }
+    .filters select, .filters input { padding: 9px 11px; font-size: 0.88rem; border-radius: 10px; }
+
+    .list-head { display: flex; align-items: center; justify-content: space-between; margin: 26px 4px 12px; gap: 12px; }
+    .list-head h2 { font-size: 1.05rem; margin: 0; }
+    .count { font-size: 0.8rem; color: var(--muted); background: var(--panel-2);
+             padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border); }
+
+    /* ---------- Items table ---------- */
+    .table-wrap { overflow-x: auto; border-radius: 16px; border: 1px solid var(--border);
+                  background: var(--panel); box-shadow: var(--card-shadow); }
+    table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+    th, td { text-align: left; padding: 12px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    th { font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted);
+         background: var(--panel-2); font-weight: 700; white-space: nowrap; }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover { background: color-mix(in srgb, var(--panel-2) 60%, transparent); }
+    .item-title { font-weight: 650; text-decoration: none; }
+    .item-title:hover { text-decoration: underline; color: var(--accent); }
+    .item-meta { font-size: 0.76rem; color: var(--muted); margin-top: 4px; }
+    .nowrap { white-space: nowrap; }
+    details.why { margin-top: 6px; font-size: 0.78rem; color: var(--muted); }
+    details.why summary { cursor: pointer; color: var(--accent); font-weight: 600; width: fit-content; }
+    details.why ul { margin: 4px 0 8px; padding-left: 18px; line-height: 1.5; }
+    details.why b { color: var(--text); font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.04em; }
+
+    .pager { display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin-top: 14px;
+             font-size: 0.85rem; color: var(--muted); }
+
+    /* ---------- Badges ---------- */
+    .badges { margin-top: 9px; }
+    .badge {
+      display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 999px;
+      font-size: 0.72rem; font-weight: 800; margin: 0 6px 6px 0; border: 1px solid transparent;
+      white-space: nowrap;
+    }
+    td .badge { margin-bottom: 2px; }
+    .s-urgent, .p-high { background: rgba(239,68,68,.16); color: #ef4444; border-color: rgba(239,68,68,.4); }
+    .s-high   { background: rgba(245,158,11,.16); color: #f59e0b; border-color: rgba(245,158,11,.4); }
+    .s-medium, .p-medium { background: rgba(99,102,241,.16); color: #818cf8; border-color: rgba(99,102,241,.4); }
+    .s-low, .p-low { background: rgba(6,182,212,.16); color: #22d3ee; border-color: rgba(6,182,212,.4); }
+    .label    { background: var(--panel-3); color: var(--muted); border-color: var(--border); }
+    .gh-label { background: transparent; color: var(--muted); border-color: var(--border); font-weight: 600; }
+    .owner    { background: color-mix(in srgb, var(--accent) 16%, transparent);
+                color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
+    .kind     { background: var(--panel-3); color: var(--text); border-color: var(--border); font-size: 0.66rem; }
+    .c-bug { background: rgba(239,68,68,.10); color: #f87171; border-color: rgba(239,68,68,.3); }
+    .c-feature { background: rgba(34,197,94,.10); color: var(--accent); border-color: rgba(34,197,94,.3); }
+    .c-documentation { background: rgba(14,165,233,.10); color: #38bdf8; border-color: rgba(14,165,233,.3); }
+    .c-question { background: rgba(168,85,247,.10); color: #c084fc; border-color: rgba(168,85,247,.3); }
+    .conf { font-size: 0.7rem; color: var(--muted); }
+    .src { display: inline-block; font-size: 0.68rem; font-weight: 700; padding: 1px 7px; border-radius: 6px;
+           border: 1px solid var(--border); color: var(--muted); margin-top: 3px; letter-spacing: 0.02em; }
+    .src-ml { color: #a5b4fc; border-color: rgba(129,140,248,.45); background: rgba(99,102,241,.10); }
+    .src-github_label { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
+    [data-theme="light"] .src-ml { color: #4f46e5; }
+    .model-status { display: inline-flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 0.8rem;
+                    color: var(--muted); padding: 6px 12px; border-radius: 999px;
+                    background: var(--panel-2); border: 1px solid var(--border); max-width: 100%; }
+    .model-status .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--muted); }
+    .model-status.on .dot { background: var(--accent); }
+    .model-status.off .dot { background: #f59e0b; }
+    .preview .cat-reasons { display: block; margin-top: 4px; font-size: 0.78rem; opacity: 0.85; }
+    .state-open { color: var(--accent); font-weight: 600; }
+    .state-closed { color: var(--muted); }
+
+    /* ---------- Manual triage ---------- */
     .preview {
       font-size: 0.85rem; color: var(--muted); margin-top: 14px;
       padding: 12px 14px; border-radius: 12px; background: var(--panel-2);
       border: 1px dashed var(--border); min-height: 20px; line-height: 1.5;
     }
-
-    .list-head { display: flex; align-items: center; justify-content: space-between; margin: 26px 4px 12px; }
-    .list-head h2 { font-size: 1.05rem; margin: 0; }
-    .count { font-size: 0.8rem; color: var(--muted); background: var(--panel-2);
-             padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border); }
-
-    /* Issue cards with hover lift + shadow */
     .issue {
       display: flex; align-items: flex-start; gap: 14px; padding: 16px;
       border-radius: 16px; background: var(--panel); border: 1px solid var(--border);
@@ -194,19 +265,6 @@
     .issue.closed .title { text-decoration: line-through; opacity: 0.55; }
     .issue .title { font-weight: 700; font-size: 1rem; }
     .issue .reason { font-size: 0.78rem; color: var(--muted); margin-top: 8px; line-height: 1.5; }
-    .badges { margin-top: 9px; }
-    .badge {
-      display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 999px;
-      font-size: 0.72rem; font-weight: 800; margin: 0 6px 6px 0; border: 1px solid transparent;
-    }
-    .s-urgent { background: rgba(239,68,68,.16); color: #ef4444; border-color: rgba(239,68,68,.4); }
-    .s-high   { background: rgba(245,158,11,.16); color: #f59e0b; border-color: rgba(245,158,11,.4); }
-    .s-medium { background: rgba(99,102,241,.16); color: #818cf8; border-color: rgba(99,102,241,.4); }
-    .s-low    { background: rgba(6,182,212,.16); color: #22d3ee; border-color: rgba(6,182,212,.4); }
-    .label    { background: var(--panel-3); color: var(--muted); border-color: var(--border); }
-    .owner    { background: color-mix(in srgb, var(--accent) 16%, transparent);
-                color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
-
     .check { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--accent); cursor: pointer; }
     .grow { flex: 1; min-width: 0; }
     .del {
@@ -214,322 +272,536 @@
       border-radius: 10px; padding: 7px 12px; font-size: 0.8rem; cursor: pointer;
       transition: all 0.18s ease;
     }
-    .del:hover { color: #ef4444; border-color: rgba(239,68,68,.5); box-shadow: 0 6px 16px rgba(239,68,68,.2); }
+    .del:hover { color: var(--danger); border-color: rgba(239,68,68,.5); box-shadow: 0 6px 16px rgba(239,68,68,.2); }
     .empty { color: var(--muted); text-align: center; padding: 30px; border: 1px dashed var(--border); border-radius: 16px; }
 
-    /* ---------- Login screen ---------- */
-    .login-overlay {
-      position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 20px;
-      background:
-        radial-gradient(700px 420px at 20% 0%, var(--bg-glow-1), transparent 60%),
-        radial-gradient(700px 420px at 90% 100%, var(--bg-glow-2), transparent 60%),
-        var(--bg);
+    @media (max-width: 980px) {
+      .filters { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .filters .f-search { grid-column: span 2; }
     }
-    .login-card {
-      width: 100%; max-width: 400px; text-align: center;
-      background: var(--panel); border: 1px solid var(--border);
-      border-radius: 22px; padding: 34px 30px; box-shadow: var(--card-shadow);
+    @media (max-width: 700px) {
+      .import-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .import-row .f-repo, .import-row .btn { grid-column: 1 / -1; }
+      .filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .filters .f-search { grid-column: 1 / -1; }
+      .col-updated, .col-state { display: none; }
+      .hero h1 { font-size: 1.5rem; }
     }
-    .login-card img { height: 66px; margin-bottom: 10px; }
-    .login-card h2 { margin: 6px 0 2px; font-size: 1.35rem; }
-    .login-card .tag { color: var(--muted); font-size: 0.86rem; margin-bottom: 20px; }
-    .login-card label { text-align: left; }
-    .switch-row { margin-top: 18px; font-size: 0.85rem; color: var(--muted); }
-    .link-btn {
-      border: none; background: transparent; color: var(--accent);
-      font-weight: 700; font-size: 0.85rem; cursor: pointer; padding: 2px 4px;
-      text-decoration: underline; text-underline-offset: 3px;
-    }
-    .link-btn:hover { color: var(--accent-strong); }
-    .err { color: #ef4444; font-size: 0.8rem; min-height: 16px; margin-top: 8px; }
-    .err.ok { color: var(--accent); }
-    .hidden { display: none !important; }
-
-    @media (max-width: 620px) {
-      .brand .sub, .nav-links { display: none; }
-      .user-chip .uname { display: none; }
+    @media (max-width: 520px) {
+      .brand .sub, .brand .name { display: none; }
+      .nav { padding: 10px 14px; gap: 8px; }
+      .nav-pill { white-space: nowrap; }
+      .nav-links { margin-left: 0; }
+      .nav-pill { padding: 8px 11px; font-size: 0.84rem; }
     }
   </style>
 </head>
 <body>
-  <!-- ---------- Login screen ---------- -->
-  <div id="login" class="login-overlay">
-    <form class="login-card" id="loginForm" autocomplete="off">
-      <img src="/static/KIIT-logo-HD.png" alt="KIIT" />
-      <h2 id="loginTitle">Welcome to TriageBot</h2>
-      <div class="tag" id="loginTag">Sign in to triage your team's incoming issues</div>
-      <label for="lname">Username</label>
-      <input id="lname" placeholder="e.g. Anindita" />
-
-      <div class="signup-only hidden">
-        <label for="lfull">Full name</label>
-        <input id="lfull" placeholder="e.g. Anindita Mukhopadhyay" />
+  <nav class="nav">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
       </div>
-      <div class="signup-only hidden">
-        <label for="lyear">Year</label>
-        <select id="lyear">
-          <option value="">Select year</option>
-          <option>1st Year</option>
-          <option>2nd Year</option>
-          <option>3rd Year</option>
-          <option>4th Year</option>
-        </select>
+      <div>
+        <div class="name">TriageBot</div>
+        <div class="sub">GitHub issue &amp; PR triage</div>
       </div>
-      <div class="signup-only hidden">
-        <label for="lbranch">Stream / Branch</label>
-        <select id="lbranch">
-          <option value="">Select stream</option>
-          <option>Computer Science</option>
-          <option>Information Technology</option>
-          <option>Electronics &amp; Communication</option>
-          <option>Electrical</option>
-          <option>Mechanical</option>
-          <option>Civil</option>
-          <option>Other</option>
-        </select>
-      </div>
-
-      <label for="lpass">Password</label>
-      <input id="lpass" type="password" placeholder="••••••••" />
-      <div id="confirmRow" class="signup-only hidden">
-        <label for="lpass2">Confirm password</label>
-        <input id="lpass2" type="password" placeholder="••••••••" />
-      </div>
-      <div class="err" id="loginErr"></div>
-      <button class="btn block" type="submit" id="loginBtn">Sign in</button>
-      <div class="switch-row">
-        <span id="switchText">New here?</span>
-        <button type="button" class="link-btn" id="switchMode">Create an account</button>
-      </div>
-    </form>
-  </div>
-
-  <!-- ---------- App ---------- -->
-  <div id="app" class="hidden">
-    <nav class="nav">
-      <div class="brand">
-        <img src="/static/KIIT-logo-HD.png" alt="KIIT logo" />
-        <div>
-          <div class="name">TriageBot</div>
-          <div class="sub">HowToAlgo x GDG on Campus KIIT</div>
-        </div>
-      </div>
-      <div class="nav-links">
-        <button class="nav-pill active" data-view="triage">Dashboard</button>
-      </div>
-      <div class="nav-right">
-        <button class="icon-btn" id="themeBtn" title="Toggle light / dark">🌙</button>
-        <div class="user-chip">
-          <span class="avatar" id="avatar">U</span>
-          <span class="uname" id="uname">user</span>
-          <button class="logout" id="logoutBtn">Logout</button>
-        </div>
-      </div>
-    </nav>
-
-    <div class="wrap">
-      <div class="hero">
-        <h1>Triage an incoming issue</h1>
-        <p>The assistant suggests severity, labels &amp; the likely owner — with a reason.</p>
-      </div>
-
-      <div class="card compose">
-        <label for="title">Issue title</label>
-        <input id="title" placeholder="e.g. API returns 500 on login, users can't sign in" />
-        <label for="body">Body (optional)</label>
-        <textarea id="body" placeholder="Steps to reproduce, stack traces, context..."></textarea>
-        <div class="preview" id="preview">Start typing to see the triage suggestion…</div>
-        <button class="btn" id="addBtn">Triage &amp; save</button>
-      </div>
-
-      <div class="list-head">
-        <h2>Triaged issues</h2>
-        <span class="count" id="count">0</span>
-      </div>
-      <div id="list"></div>
     </div>
-  </div>
+    <div class="nav-links" role="tablist">
+      <button class="nav-pill active" data-view="items" role="tab">GitHub items</button>
+      <button class="nav-pill" data-view="manual" role="tab">Manual triage</button>
+    </div>
+    <div class="nav-right">
+      <button class="icon-btn" id="themeBtn" title="Toggle light / dark" aria-label="Toggle light or dark theme">🌙</button>
+    </div>
+  </nav>
+
+  <!-- ---------- GitHub items view ---------- -->
+  <main id="view-items" class="wrap">
+    <div class="hero">
+      <h1>Triage GitHub issues &amp; pull requests</h1>
+      <p>Import a public repository to get category &amp; priority suggestions with reasons.
+         Read-only: nothing is posted to GitHub.</p>
+      <div id="modelStatus" class="model-status" role="status" hidden><span class="dot"></span><span id="modelStatusText"></span></div>
+    </div>
+
+    <form class="card" id="importForm" novalidate>
+      <div class="import-row">
+        <div class="f-repo">
+          <label for="repo">Public repository</label>
+          <input id="repo" name="repo" placeholder="owner/name or https://github.com/owner/name"
+                 autocomplete="off" spellcheck="false" required maxlength="300" />
+        </div>
+        <div>
+          <label for="importState">State</label>
+          <select id="importState">
+            <option value="open">Open</option>
+            <option value="closed">Closed</option>
+            <option value="all">All</option>
+          </select>
+        </div>
+        <div>
+          <label for="importLimit">Max items</label>
+          <input id="importLimit" type="number" min="1" max="500" value="100" />
+        </div>
+        <button class="btn" type="submit" id="importBtn">Import</button>
+      </div>
+      <div class="hint">Fetches the most recently updated issues and PRs. Re-importing refreshes existing items.</div>
+      <div id="importStatus" class="status" role="status" aria-live="polite" hidden></div>
+    </form>
+
+    <div class="filters" id="filters">
+      <div>
+        <label for="fRepo">Repository</label>
+        <select id="fRepo"><option value="">All repositories</option></select>
+      </div>
+      <div>
+        <label for="fType">Type</label>
+        <select id="fType">
+          <option value="">All</option><option value="issue">Issues</option><option value="pr">Pull requests</option>
+        </select>
+      </div>
+      <div>
+        <label for="fCategory">Category</label>
+        <select id="fCategory">
+          <option value="">All</option><option value="bug">Bug</option><option value="feature">Feature</option>
+          <option value="documentation">Documentation</option><option value="question">Question</option>
+        </select>
+      </div>
+      <div>
+        <label for="fPriority">Priority</label>
+        <select id="fPriority">
+          <option value="">All</option><option value="high">High</option>
+          <option value="medium">Medium</option><option value="low">Low</option>
+        </select>
+      </div>
+      <div>
+        <label for="fState">State</label>
+        <select id="fState">
+          <option value="">All</option><option value="open">Open</option><option value="closed">Closed</option>
+        </select>
+      </div>
+      <div>
+        <label for="fSource">Category source</label>
+        <select id="fSource">
+          <option value="">All</option><option value="ml">ML model</option>
+          <option value="rules">Rules</option><option value="github_label">Maintainer label</option>
+        </select>
+      </div>
+      <div class="f-search">
+        <label for="fQ">Search</label>
+        <input id="fQ" type="search" placeholder="Title, body or #number" maxlength="200" />
+      </div>
+      <button class="btn ghost" type="button" id="resetFilters">Reset</button>
+    </div>
+
+    <div id="itemsError" class="status err" role="alert" hidden></div>
+    <div id="itemsEmpty" class="empty" hidden></div>
+    <div class="table-wrap" id="itemsTableWrap" hidden>
+      <table>
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Category</th>
+            <th>Priority</th>
+            <th class="col-state">State</th>
+            <th class="col-updated">Updated</th>
+          </tr>
+        </thead>
+        <tbody id="itemsBody"></tbody>
+      </table>
+    </div>
+    <div class="pager" id="pager" hidden>
+      <span id="pageInfo"></span>
+      <button class="btn ghost" type="button" id="prevPage">← Prev</button>
+      <button class="btn ghost" type="button" id="nextPage">Next →</button>
+    </div>
+  </main>
+
+  <!-- ---------- Manual triage view (original feature) ---------- -->
+  <main id="view-manual" class="wrap narrow" hidden>
+    <div class="hero">
+      <h1>Triage an issue by hand</h1>
+      <p>Paste any issue to get a severity, labels &amp; likely owner — with a reason.</p>
+    </div>
+
+    <div class="card compose">
+      <label for="title">Issue title</label>
+      <input id="title" placeholder="e.g. API returns 500 on login, users can't sign in" maxlength="200" />
+      <label for="body">Body (optional)</label>
+      <textarea id="body" placeholder="Steps to reproduce, stack traces, context..." maxlength="5000"></textarea>
+      <div class="preview" id="preview" aria-live="polite">Start typing to see the triage suggestion…</div>
+      <button class="btn" id="addBtn">Triage &amp; save</button>
+      <div id="manualError" class="status err" role="alert" hidden></div>
+    </div>
+
+    <div class="list-head">
+      <h2>Triaged issues</h2>
+      <span class="count" id="count">0</span>
+    </div>
+    <div id="list"></div>
+  </main>
 
   <script>
     const $ = (id) => document.getElementById(id);
-    const api = (path, opts) => fetch(path, opts).then((r) => (r.status === 204 ? null : r.json()));
-    const escapeHtml = (s) => String(s).replace(/[&<>"']/g,
+    const escapeHtml = (s) => String(s ?? "").replace(/[&<>"']/g,
       (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    const store = {
+      get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+      set(k, v) { try { localStorage.setItem(k, v); } catch { /* storage unavailable */ } },
+    };
+
+    /* ---------- API helper with readable errors ---------- */
+    function errorMessage(status, data) {
+      const detail = data && data.detail;
+      if (typeof detail === "string") return detail;
+      if (Array.isArray(detail)) {
+        return detail.map((e) => {
+          const field = (e.loc || []).filter((p) => p !== "body" && p !== "query").join(".");
+          return (field ? `${field}: ` : "") + e.msg;
+        }).join("; ");
+      }
+      return `Request failed (HTTP ${status}).`;
+    }
+
+    async function api(path, opts) {
+      let res;
+      try {
+        res = await fetch(path, opts);
+      } catch {
+        throw new Error("Could not reach the TriageBot server. Is it still running?");
+      }
+      if (res.status === 204) return null;
+      let data = null;
+      try { data = await res.json(); } catch { /* non-JSON body */ }
+      if (!res.ok) throw new Error(errorMessage(res.status, data));
+      return data;
+    }
+    const postJson = (path, body, method = "POST") => api(path, {
+      method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+    });
+
+    function showStatus(el, kind, message) {
+      el.className = `status ${kind}`;
+      el.textContent = message;
+      el.hidden = !message;
+    }
 
     /* ---------- Theme ---------- */
     function applyTheme(theme) {
       document.documentElement.dataset.theme = theme;
-      localStorage.setItem("tb_theme", theme);
+      store.set("tb_theme", theme);
       $("themeBtn").textContent = theme === "dark" ? "🌙" : "☀️";
     }
-    applyTheme(localStorage.getItem("tb_theme") || "dark");
+    applyTheme(store.get("tb_theme") || "dark");
     $("themeBtn").addEventListener("click", () => {
       applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
     });
 
-    /* ---------- Login ---------- */
-    function showApp(user, profile) {
-      $("login").classList.add("hidden");
-      $("app").classList.remove("hidden");
-      $("uname").textContent = user;
-      $("avatar").textContent = (user[0] || "U").toUpperCase();
-      const chip = document.querySelector(".user-chip");
-      if (profile && (profile.year || profile.branch)) {
-        chip.title = [profile.year, profile.branch].filter(Boolean).join(" · ");
-      } else {
-        chip.removeAttribute("title");
+    /* ---------- Views ---------- */
+    function showView(view) {
+      document.querySelectorAll(".nav-pill").forEach((b) => {
+        const active = b.dataset.view === view;
+        b.classList.toggle("active", active);
+        b.setAttribute("aria-selected", String(active));
+      });
+      $("view-items").hidden = view !== "items";
+      $("view-manual").hidden = view !== "manual";
+      store.set("tb_view", view);
+      if (view === "manual") refreshManual();
+    }
+    document.querySelectorAll(".nav-pill").forEach((b) =>
+      b.addEventListener("click", () => showView(b.dataset.view)));
+
+    /* ---------- GitHub items ---------- */
+    const PAGE_SIZE = 50;
+    let offset = 0;
+    let listSeq = 0;
+
+    const safeUrl = (u) => (/^https:\/\/github\.com\//.test(u || "") ? u : "#");
+
+    function timeAgo(iso) {
+      const t = Date.parse(iso);
+      if (Number.isNaN(t)) return "";
+      const s = Math.max(0, (Date.now() - t) / 1000);
+      const steps = [[60, "s"], [60, "m"], [24, "h"], [30, "d"], [12, "mo"], [Infinity, "y"]];
+      let v = s;
+      for (const [n, unit] of steps) {
+        if (v < n) return `${Math.floor(v)}${unit} ago`;
+        v /= n;
       }
-      refresh();
+      return "";
     }
-    function checkSession() {
-      const key = localStorage.getItem("tb_user");
-      if (!key) return;
-      const rec = getUsers()[key];
-      if (rec) showApp(rec.display || key, rec);
-      else showApp(key);
+
+    const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
+    function reasonsList(reasons) {
+      return `<ul>${reasons.map((r) => `<li>${escapeHtml(r)}</li>`).join("")}</ul>`;
     }
-    let authMode = "signin";
-    function setMode(mode) {
-      authMode = mode;
-      const signup = mode === "signup";
-      document.querySelectorAll(".signup-only").forEach((el) => el.classList.toggle("hidden", !signup));
-      $("loginTitle").textContent = signup ? "Create your account" : "Welcome to TriageBot";
-      $("loginTag").textContent = signup
-        ? "Sign up to start triaging issues"
-        : "Sign in to triage your team's incoming issues";
-      $("loginBtn").textContent = signup ? "Create account" : "Sign in";
-      $("switchText").textContent = signup ? "Already have an account?" : "New here?";
-      $("switchMode").textContent = signup ? "Sign in" : "Create an account";
-      $("loginErr").textContent = "";
-      $("loginErr").classList.remove("ok");
+
+    const SOURCE_TEXT = {
+      ml: "ML model decided this category (probability shown)",
+      rules: "Keyword rules decided this category (ML unavailable, unsure, or item is a PR)",
+      github_label: "A maintainer's GitHub label decided this category",
+    };
+    function sourceChip(source, score) {
+      if (!source) return "";
+      const text = source === "ml" && score != null ? `ML ${Math.round(score * 100)}%`
+        : source === "github_label" ? "maintainer label" : source;
+      return `<span class="src src-${escapeHtml(source)}" title="${escapeHtml(SOURCE_TEXT[source] || "")}">${escapeHtml(text)}</span>`;
     }
-    $("switchMode").addEventListener("click", () =>
-      setMode(authMode === "signin" ? "signup" : "signin"));
 
-    async function sha256(text) {
-      const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
-      return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+    function itemRow(it) {
+      const labels = it.github_labels.map((l) => `<span class="badge gh-label">${escapeHtml(l)}</span>`).join("");
+      const kind = it.kind === "pr" ? (it.is_draft ? "PR · draft" : "PR") : "Issue";
+      const owner = it.owner_hint ? `<div class="item-meta">owner hint: ${escapeHtml(it.owner_hint)}</div>` : "";
+      return `<tr>
+        <td>
+          <span class="badge kind">${kind}</span>
+          <a class="item-title" href="${escapeHtml(safeUrl(it.html_url))}" target="_blank" rel="noopener noreferrer">${escapeHtml(it.title)}</a>
+          <div class="item-meta">${escapeHtml(it.repo)}#${it.number} · by ${escapeHtml(it.author || "unknown")}
+            · ${plural(it.comments, "comment")} · ${plural(it.reactions, "reaction")}</div>
+          ${labels ? `<div class="badges">${labels}</div>` : ""}
+          <details class="why"><summary>Why this suggestion?</summary>
+            <b>Category</b>${reasonsList(it.category_reasons)}
+            <b>Priority</b>${reasonsList(it.priority_reasons)}
+          </details>
+        </td>
+        <td class="nowrap">
+          <span class="badge c-${escapeHtml(it.category)}">${escapeHtml(it.category)}</span>
+          <div class="conf">${escapeHtml(it.category_confidence)} confidence</div>
+          ${sourceChip(it.category_source, it.category_score)}
+          ${owner}
+        </td>
+        <td><span class="badge p-${escapeHtml(it.priority)}">${escapeHtml(it.priority)}</span></td>
+        <td class="col-state"><span class="state-${escapeHtml(it.state)}">${escapeHtml(it.state)}</span></td>
+        <td class="col-updated nowrap" title="${escapeHtml(it.updated_at)}">${escapeHtml(timeAgo(it.updated_at))}</td>
+      </tr>`;
     }
-    const getUsers = () => { try { return JSON.parse(localStorage.getItem("tb_users") || "{}"); } catch { return {}; } };
-    const saveUsers = (u) => localStorage.setItem("tb_users", JSON.stringify(u));
 
-    const setErr = (m) => { const e = $("loginErr"); e.classList.remove("ok"); e.textContent = m; };
-    const setOk = (m) => { const e = $("loginErr"); e.classList.add("ok"); e.textContent = m; };
+    function currentFilters() {
+      const params = new URLSearchParams();
+      const pairs = [["repo", "fRepo"], ["type", "fType"], ["category", "fCategory"],
+                     ["priority", "fPriority"], ["state", "fState"], ["source", "fSource"],
+                     ["q", "fQ"]];
+      for (const [key, id] of pairs) {
+        const v = $(id).value.trim();
+        if (v) params.set(key, v);
+      }
+      return params;
+    }
 
-    $("loginForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const name = $("lname").value.trim();
-      const pass = $("lpass").value;
-      if (name.length < 2) return setErr("Enter a username (2+ characters).");
-      if (pass.length < 4) return setErr("Password must be at least 4 characters.");
+    async function loadItems() {
+      const seq = ++listSeq;
+      const params = currentFilters();
+      params.set("limit", PAGE_SIZE);
+      params.set("offset", offset);
+      try {
+        const page = await api(`/items?${params}`);
+        if (seq !== listSeq) return; // a newer request superseded this one
+        $("itemsError").hidden = true;
+        renderItems(page, params);
+      } catch (err) {
+        if (seq !== listSeq) return;
+        showStatus($("itemsError"), "err", `Could not load items: ${err.message}`);
+      }
+    }
 
-      const users = getUsers();
-      const key = name.toLowerCase();
-      const hash = await sha256(pass);
-
-      if (authMode === "signup") {
-        const year = $("lyear").value;
-        const branch = $("lbranch").value;
-        if (!year) return setErr("Please select your year.");
-        if (!branch) return setErr("Please select your stream / branch.");
-        if ($("lpass2").value !== pass) return setErr("Passwords do not match.");
-        if (users[key]) return setErr("That username already exists. Try signing in.");
-
-        users[key] = { hash, display: name, full: $("lfull").value.trim(), year, branch };
-        saveUsers(users);
-
-        // Do NOT auto-login. Send the user to the sign-in screen.
-        setMode("signin");
-        $("lpass").value = "";
-        $("lpass2").value = "";
-        setOk("Account created — please sign in to continue.");
-        $("lpass").focus();
+    function renderItems(page, params) {
+      const hasFilters = [...params.keys()].some((k) => k !== "limit" && k !== "offset");
+      const empty = page.items.length === 0;
+      $("itemsTableWrap").hidden = empty;
+      $("pager").hidden = empty;
+      $("itemsEmpty").hidden = !empty;
+      if (empty) {
+        $("itemsEmpty").textContent = hasFilters
+          ? "No items match these filters."
+          : "No items yet. Import a public repository above, e.g. fastapi/fastapi.";
         return;
       }
+      $("itemsBody").innerHTML = page.items.map(itemRow).join("");
+      const end = page.offset + page.items.length;
+      $("pageInfo").textContent = `Showing ${page.offset + 1}–${end} of ${page.total}`;
+      $("prevPage").disabled = page.offset === 0;
+      $("nextPage").disabled = end >= page.total;
+    }
 
-      const rec = users[key];
-      if (!rec || rec.hash !== hash) return setErr("Invalid username or password.");
-      localStorage.setItem("tb_user", key);
-      showApp(rec.display || name, rec);
+    async function loadRepos(select) {
+      try {
+        const repos = await api("/repos");
+        const current = select ?? $("fRepo").value;
+        $("fRepo").innerHTML = '<option value="">All repositories</option>' + repos.map((r) =>
+          `<option value="${escapeHtml(r.full_name)}">${escapeHtml(r.full_name)} (${r.item_count})</option>`).join("");
+        $("fRepo").value = repos.some((r) => r.full_name === current) ? current : "";
+      } catch (err) {
+        showStatus($("itemsError"), "err", `Could not load repositories: ${err.message}`);
+      }
+    }
+
+    $("importForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const status = $("importStatus");
+      const repo = $("repo").value.trim();
+      const limit = Number($("importLimit").value);
+      if (!repo) return showStatus(status, "err", "Enter a repository such as fastapi/fastapi.");
+      if (!Number.isInteger(limit) || limit < 1 || limit > 500) {
+        return showStatus(status, "err", "Max items must be a whole number from 1 to 500.");
+      }
+      const btn = $("importBtn");
+      btn.disabled = true;
+      btn.textContent = "Importing…";
+      showStatus(status, "info", `Fetching ${repo} from GitHub…`);
+      try {
+        const res = await postJson("/repos/import", { repo, state: $("importState").value, limit });
+        const left = res.rate_limit_remaining == null ? "" :
+          ` GitHub API requests left this hour: ${res.rate_limit_remaining}.`;
+        showStatus(status, "ok",
+          `Imported ${res.fetched} items from ${res.repo.full_name} ` +
+          `(${res.issues} issues, ${res.pull_requests} PRs).${left}`);
+        offset = 0;
+        await loadRepos(res.repo.full_name);
+        loadItems();
+      } catch (err) {
+        showStatus(status, "err", `Import failed: ${err.message}`);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Import";
+      }
     });
 
-    $("logoutBtn").addEventListener("click", () => {
-      localStorage.removeItem("tb_user");
-      $("app").classList.add("hidden");
-      $("login").classList.remove("hidden");
-      $("lname").value = ""; $("lpass").value = ""; $("lpass2").value = "";
-      setMode("signin");
+    let searchTimer;
+    const onFilterChange = () => { offset = 0; loadItems(); };
+    ["fRepo", "fType", "fCategory", "fPriority", "fState", "fSource"].forEach((id) =>
+      $(id).addEventListener("change", onFilterChange));
+    $("fQ").addEventListener("input", () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(onFilterChange, 250);
     });
+    $("resetFilters").addEventListener("click", () => {
+      ["fRepo", "fType", "fCategory", "fPriority", "fState", "fSource", "fQ"]
+        .forEach((id) => { $(id).value = ""; });
+      onFilterChange();
+    });
+    $("prevPage").addEventListener("click", () => { offset = Math.max(0, offset - PAGE_SIZE); loadItems(); });
+    $("nextPage").addEventListener("click", () => { offset += PAGE_SIZE; loadItems(); });
 
-    /* ---------- Triage UI ---------- */
+    /* ---------- Manual triage (original feature) ---------- */
     function badges(x) {
       const labels = x.labels.map((l) => `<span class="badge label">${escapeHtml(l)}</span>`).join("");
-      return `<span class="badge s-${x.severity}">${x.severity}</span>${labels}` +
+      return `<span class="badge s-${escapeHtml(x.severity)}">${escapeHtml(x.severity)}</span>${labels}` +
              `<span class="badge owner">@${escapeHtml(x.owner)}</span>`;
     }
+    const manualError = (m) => showStatus($("manualError"), "err", m);
 
-    async function refresh() {
-      const issues = await api("/issues");
-      $("count").textContent = issues.length;
-      const list = $("list");
-      if (!issues.length) {
-        list.innerHTML = '<div class="empty">No issues yet. Triage one above.</div>';
-        return;
+    async function refreshManual() {
+      try {
+        const issues = await api("/issues");
+        $("count").textContent = issues.length;
+        const list = $("list");
+        if (!issues.length) {
+          list.innerHTML = '<div class="empty">No issues yet. Triage one above.</div>';
+          return;
+        }
+        list.innerHTML = issues.map((it) => `
+          <div class="issue ${it.status === "closed" ? "closed" : ""}">
+            <input class="check" type="checkbox" ${it.status === "closed" ? "checked" : ""}
+                   title="Mark closed" aria-label="Mark closed" data-toggle="${it.id}" />
+            <div class="grow">
+              <div class="title">${escapeHtml(it.title)}</div>
+              <div class="badges">${badges(it)}</div>
+              <div class="reason">${escapeHtml(it.reason)}</div>
+            </div>
+            <button class="del" data-delete="${it.id}">Delete</button>
+          </div>`).join("");
+      } catch (err) {
+        manualError(`Could not load issues: ${err.message}`);
       }
-      list.innerHTML = issues.map((it) => `
-        <div class="issue ${it.status === "closed" ? "closed" : ""}">
-          <input class="check" type="checkbox" ${it.status === "closed" ? "checked" : ""}
-                 title="Mark closed" onchange="toggle(${it.id}, this.checked)" />
-          <div class="grow">
-            <div class="title">${escapeHtml(it.title)}</div>
-            <div class="badges">${badges(it)}</div>
-            <div class="reason">${escapeHtml(it.reason)}</div>
-          </div>
-          <button class="del" onclick="remove(${it.id})">Delete</button>
-        </div>`).join("");
     }
 
     async function add() {
       const title = $("title").value.trim();
-      if (!title) return;
-      await api("/issues", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, body: $("body").value }),
-      });
-      $("title").value = ""; $("body").value = "";
-      $("preview").textContent = "Start typing to see the triage suggestion…";
-      refresh();
+      if (!title) return manualError("Enter an issue title first.");
+      try {
+        await postJson("/issues", { title, body: $("body").value });
+        $("manualError").hidden = true;
+        $("title").value = ""; $("body").value = "";
+        $("preview").textContent = "Start typing to see the triage suggestion…";
+        refreshManual();
+      } catch (err) {
+        manualError(`Could not save: ${err.message}`);
+      }
     }
 
+    let previewSeq = 0;
     async function preview() {
+      const seq = ++previewSeq;
       const title = $("title").value.trim();
       if (!title) { $("preview").textContent = "Start typing to see the triage suggestion…"; return; }
-      const res = await api("/triage", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, body: $("body").value }),
-      });
-      $("preview").innerHTML =
-        `<b>Suggestion:</b> ${badges(res)}<br/><span style="opacity:.85">${escapeHtml(res.reason)}</span>`;
+      try {
+        const res = await postJson("/triage", { title, body: $("body").value });
+        if (seq !== previewSeq) return;
+        const category = res.category
+          ? `<br/><b>Category:</b> <span class="badge c-${escapeHtml(res.category)}">${escapeHtml(res.category)}</span>` +
+            `${sourceChip(res.category_source, res.category_score)}` +
+            `<span class="cat-reasons">${res.category_reasons.map(escapeHtml).join(" · ")}</span>`
+          : "";
+        $("preview").innerHTML =
+          `<b>Suggestion:</b> ${badges(res)}<br/><span style="opacity:.85">${escapeHtml(res.reason)}</span>` +
+          category;
+      } catch (err) {
+        if (seq !== previewSeq) return;
+        $("preview").textContent = `Preview unavailable: ${err.message}`;
+      }
     }
 
-    async function toggle(id, closed) {
-      await api(`/issues/${id}`, {
-        method: "PATCH", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: closed ? "closed" : "open" }),
-      });
-      refresh();
-    }
-    async function remove(id) { await api(`/issues/${id}`, { method: "DELETE" }); refresh(); }
-
-    window.toggle = toggle;
-    window.remove = remove;
+    $("list").addEventListener("change", async (e) => {
+      const id = e.target.dataset.toggle;
+      if (!id) return;
+      try {
+        await postJson(`/issues/${id}`, { status: e.target.checked ? "closed" : "open" }, "PATCH");
+      } catch (err) { manualError(`Could not update: ${err.message}`); }
+      refreshManual();
+    });
+    $("list").addEventListener("click", async (e) => {
+      const id = e.target.dataset.delete;
+      if (!id) return;
+      try { await api(`/issues/${id}`, { method: "DELETE" }); }
+      catch (err) { manualError(`Could not delete: ${err.message}`); }
+      refreshManual();
+    });
     $("addBtn").addEventListener("click", add);
     let t;
     const debounced = () => { clearTimeout(t); t = setTimeout(preview, 250); };
     $("title").addEventListener("input", debounced);
     $("body").addEventListener("input", debounced);
 
-    checkSession();
+    /* ---------- Model status ---------- */
+    const pct = (x) => (x == null ? "n/a" : x.toFixed(3));
+    async function loadModelStatus() {
+      const box = $("modelStatus");
+      try {
+        const m = await api("/model");
+        box.classList.toggle("on", m.available);
+        box.classList.toggle("off", !m.available);
+        $("modelStatusText").textContent = m.available
+          ? `Category model: ML (TF-IDF + logistic regression) · test macro-F1 ${pct(m.test_macro_f1)}` +
+            ` vs rules ${pct(m.rules_baseline_macro_f1)} · unseen repos ${pct(m.unseen_repo_macro_f1)}` +
+            ` · used when ≥ ${Math.round(m.threshold * 100)}% sure, else rules`
+          : `Category model unavailable — using keyword rules (${m.reason || "unknown reason"})`;
+        box.title = m.available && m.trained_at ? `Trained ${m.trained_at} on ${m.train_size} issues` : "";
+      } catch (err) {
+        box.classList.remove("on");
+        box.classList.add("off");
+        $("modelStatusText").textContent = `Could not read model status: ${err.message}`;
+      }
+      box.hidden = false;
+    }
+
+    /* ---------- Start ---------- */
+    loadModelStatus();
+    loadRepos().then(loadItems);
+    showView(store.get("tb_view") === "manual" ? "manual" : "items");
   </script>
 </body>
 </html>

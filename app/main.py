@@ -1,25 +1,47 @@
 """FastAPI application entry point for TriageBot.
 
-Wires together the persistence layer, the triage engine, and the HTTP API,
-and serves a tiny static web UI at ``/``.
+Wires together the persistence layer, the triage engine, the read-only GitHub
+importer, and the HTTP API, and serves a tiny static web UI at ``/``.
 """
 
 from __future__ import annotations
 
 import os
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime
+from typing import Annotated
 
-from fastapi import FastAPI, HTTPException, Response
+from fastapi import Depends, FastAPI, HTTPException, Query, Response
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from app import __version__, repository, triage
+from app import __version__, importer, repository, triage
 from app.database import init_db
+from app.github_client import (
+    GitHubAuthError,
+    GitHubClient,
+    GitHubError,
+    GitHubUnavailableError,
+    RateLimitError,
+    RepoNotFoundError,
+    get_github_client,
+)
+from app.ml import service as ml_service
 from app.schemas import (
     BatchTriageItem,
+    Category,
+    CategorySource,
+    ImportResult,
     Issue,
     IssueIn,
     IssueUpdate,
+    ItemPage,
+    Kind,
+    ModelStatus,
+    Priority,
+    Repo,
+    RepoImportRequest,
+    State,
     TriageSuggestion,
 )
 
@@ -37,8 +59,9 @@ app = FastAPI(
     title="TriageBot API",
     version=__version__,
     description=(
-        "An incoming-issue triage assistant: suggests severity, labels, and "
-        "the likely owner for developer issues (Track B: Developer Productivity)."
+        "A GitHub issue & PR triage assistant: imports items from public "
+        "repositories (read-only) and suggests a category, priority, and likely "
+        "owner, each with an explanation."
     ),
     lifespan=lifespan,
 )
@@ -50,6 +73,18 @@ def health() -> dict:
     return {"status": "ok", "version": __version__}
 
 
+def _category_fields(title: str, body: str) -> dict:
+    """ML category (with rule fallback) for a manually entered issue."""
+    result = ml_service.classify(title, body, kind="issue")
+    return {
+        "category": result.category,
+        "category_confidence": result.category_confidence,
+        "category_source": result.category_source,
+        "category_score": result.category_score,
+        "category_reasons": result.category_reasons,
+    }
+
+
 @app.post("/triage", response_model=TriageSuggestion, tags=["triage"])
 def triage_preview(payload: IssueIn) -> TriageSuggestion:
     """Triage an issue *without* saving it — the core assistant feature."""
@@ -59,6 +94,7 @@ def triage_preview(payload: IssueIn) -> TriageSuggestion:
         labels=result.labels,
         owner=result.owner,
         reason=result.reason,
+        **_category_fields(payload.title, payload.body),
     )
 
 
@@ -75,6 +111,7 @@ def triage_batch(payload: list[IssueIn]) -> list[BatchTriageItem]:
                 labels=result.labels,
                 owner=result.owner,
                 reason=result.reason,
+                **_category_fields(issue.title, issue.body),
             )
         )
     return items
@@ -146,6 +183,98 @@ def delete_issue(issue_id: int) -> Response:
     if not repository.delete_issue(issue_id):
         raise HTTPException(status_code=404, detail="Issue not found")
     return Response(status_code=204)
+
+
+# --- GitHub import (read-only) ------------------------------------------------
+
+
+def _github_http_error(exc: GitHubError) -> HTTPException:
+    """Translate GitHub client errors into API responses."""
+    if isinstance(exc, RepoNotFoundError):
+        return HTTPException(status_code=404, detail=str(exc))
+    if isinstance(exc, RateLimitError):
+        headers = {}
+        retry_after = exc.retry_after
+        if retry_after is None and exc.reset_at is not None:
+            retry_after = max(0, int((exc.reset_at - datetime.now(UTC)).total_seconds()))
+        if retry_after is not None:
+            headers["Retry-After"] = str(retry_after)
+        detail = str(exc)
+        if exc.reset_at is not None:
+            detail += f" Resets at {exc.reset_at.strftime('%H:%M UTC')}."
+        return HTTPException(status_code=429, detail=detail, headers=headers)
+    if isinstance(exc, GitHubAuthError | GitHubUnavailableError):
+        return HTTPException(status_code=502, detail=str(exc))
+    return HTTPException(status_code=502, detail="GitHub request failed.")
+
+
+@app.post("/repos/import", response_model=ImportResult, tags=["github"])
+def import_repo(
+    payload: RepoImportRequest,
+    client: Annotated[GitHubClient, Depends(get_github_client)],
+) -> ImportResult:
+    """Fetch issues and PRs from a public GitHub repo, triage, and store them.
+
+    Read-only: nothing is ever written back to GitHub. Re-importing a repo
+    updates existing items instead of duplicating them.
+    """
+    owner, name = payload.repo.split("/", 1)
+    try:
+        summary = importer.import_repo(
+            client, owner, name, state=payload.state, limit=payload.limit
+        )
+    except GitHubError as exc:
+        raise _github_http_error(exc) from exc
+    return ImportResult(
+        repo=Repo(**summary.repo),
+        fetched=summary.fetched,
+        issues=summary.issues,
+        pull_requests=summary.pull_requests,
+        rate_limit_remaining=summary.rate_limit_remaining,
+    )
+
+
+@app.get("/repos", response_model=list[Repo], tags=["github"])
+def list_repos() -> list[Repo]:
+    """Repositories that have been imported."""
+    return [Repo(**row) for row in repository.list_repos()]
+
+
+@app.get("/items", response_model=ItemPage, tags=["github"])
+def list_items(
+    repo: Annotated[str | None, Query(max_length=200, description="owner/name")] = None,
+    type: Annotated[Kind | None, Query(description="'issue' or 'pr'")] = None,
+    category: Category | None = None,
+    priority: Priority | None = None,
+    state: State | None = None,
+    source: Annotated[
+        CategorySource | None, Query(description="Where the category came from")
+    ] = None,
+    q: Annotated[str | None, Query(max_length=200, description="Search title/body/#number")] = None,
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> ItemPage:
+    """List imported issues/PRs, highest priority first, with optional filters."""
+    total, rows = repository.list_items(
+        filters={
+            "repo": repo,
+            "kind": type,
+            "category": category,
+            "priority": priority,
+            "state": state,
+            "source": source,
+        },
+        q=q,
+        limit=limit,
+        offset=offset,
+    )
+    return ItemPage(total=total, limit=limit, offset=offset, items=rows)
+
+
+@app.get("/model", response_model=ModelStatus, tags=["ml"])
+def model_info() -> ModelStatus:
+    """Whether the ML category classifier is loaded, plus its recorded test scores."""
+    return ModelStatus(**ml_service.model_status())
 
 
 @app.get("/", include_in_schema=False)

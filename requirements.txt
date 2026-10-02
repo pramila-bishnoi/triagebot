@@ -1,2 +1,6 @@
 fastapi==0.115.6
 uvicorn[standard]==0.34.0
+httpx==0.28.1
+# ML classifier. numpy/scipy are left to the resolver: the model is stored as
+# plain arrays (models/issue_classifier.npz), not pickled sklearn objects.
+scikit-learn==1.9.1

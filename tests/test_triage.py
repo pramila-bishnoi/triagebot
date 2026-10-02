@@ -75,3 +75,62 @@ def test_reason_is_explainable():
 )
 def test_severity_always_valid(title):
     assert triage(title or "x").severity in VALID_SEVERITIES
+
+
+# --- Regression tests: substring matching and negation -----------------------
+# Each case below was mis-triaged by the original substring-based engine.
+
+
+def test_1500ms_is_not_http_500():
+    result = triage("Takes 1500ms to load")
+    assert result.severity != "high"
+    assert "bug" not in result.labels
+    assert result.owner != "backend-team"
+
+
+def test_docker_is_not_doc_and_build_is_not_ui():
+    result = triage("Docker image fails to build")
+    assert "documentation" not in result.labels
+    assert result.owner == "infra-team"
+
+
+def test_author_is_not_auth():
+    result = triage("Author name shown wrong")
+    assert "security" not in result.labels
+    assert result.owner != "security-team"
+
+
+def test_decide_is_not_ci():
+    result = triage("Decide on naming")
+    assert "chore" not in result.labels
+    assert result.owner != "infra-team"
+
+
+@pytest.mark.parametrize("title", ["Update email address field", "Renew SSL cert"])
+def test_address_and_renew_are_not_add_or_new(title):
+    assert "enhancement" not in triage(title).labels
+
+
+def test_not_urgent_is_negated():
+    result = triage("Not urgent: small cosmetic issue")
+    assert result.severity == "low"
+    assert "ignored negated 'urgent'" in result.reason
+
+
+def test_negation_with_filler_word():
+    assert triage("This is not a bug, just a question").labels == ["triage"]
+
+
+def test_negation_does_not_leak_across_clauses():
+    # "not" belongs to the first clause; "crash" is still a real signal.
+    assert triage("Not sure why, but the app crashes").severity == "high"
+
+
+def test_inflections_still_match():
+    assert "bug" in triage("App crashed twice").labels
+    assert "documentation" in triage("Update the docs").labels
+    assert triage("Tests failing on main").severity == "high"
+
+
+def test_word_boundary_keeps_phrases_working():
+    assert triage("Possible data loss on restart").severity == "urgent"

@@ -25,3 +25,7 @@ Thumbs.db
 
 # Env files (never commit secrets)
 .env
+
+# Training data (issue text stays local; only data/dataset_manifest.csv is committed)
+data/raw/
+data/issues.jsonl
