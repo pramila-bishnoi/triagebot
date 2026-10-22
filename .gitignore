@@ -13,6 +13,8 @@ env/
 
 # Local database / runtime artifacts
 *.db
+*.db-wal
+*.db-shm
 *.sqlite3
 taskforge.db
 
@@ -29,3 +31,9 @@ Thumbs.db
 # Training data (issue text stays local; only data/dataset_manifest.csv is committed)
 data/raw/
 data/issues.jsonl
+data/priority_raw/
+data/priority_issues.jsonl
+data/duplicates_raw/
+data/duplicate_pairs.jsonl
+data/category_external_raw/
+data/category_external.jsonl

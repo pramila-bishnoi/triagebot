@@ -18,7 +18,7 @@ def _item(raw: dict) -> dict:
 
 def test_fresh_database_gets_latest_version(db_path):
     init_db()
-    assert get_schema_version() == SCHEMA_VERSION == 3
+    assert get_schema_version() == SCHEMA_VERSION == 7
     tables = {
         row[0]
         for row in sqlite3.connect(db_path).execute(
@@ -71,12 +71,12 @@ def test_upsert_items_updates_instead_of_duplicating(db_path):
     repo = repository.upsert_repo("acme/widgets", "https://github.com/acme/widgets", "")
     repository.upsert_items(repo["id"], [_item(make_issue("Typo in docs", number=1))])
     repository.upsert_items(
-        repo["id"], [_item(make_issue("Critical outage", number=1, state="closed"))]
+        repo["id"], [_item(make_issue("Critical outage in production", number=1, state="closed"))]
     )
 
     total, items = repository.list_items()
     assert total == 1
-    assert items[0]["title"] == "Critical outage"
+    assert items[0]["title"] == "Critical outage in production"
     assert items[0]["state"] == "closed"
     assert items[0]["priority"] == "high"
 
@@ -100,12 +100,15 @@ def seeded(db_path):
     init_db()
     a = repository.upsert_repo("acme/widgets", "https://github.com/acme/widgets", "")
     b = repository.upsert_repo("acme/gadgets", "https://github.com/acme/gadgets", "")
-    repository.upsert_items(a["id"], [
-        _item(make_issue("App crashes on save", number=1)),
-        _item(make_issue("Fix typo in README", number=2, state="closed")),
-        _item(make_pr("feat: add CSV export", number=3)),
-        _item(make_issue("Slow: 100% CPU_usage when idle", number=4)),
-    ])
+    repository.upsert_items(
+        a["id"],
+        [
+            _item(make_issue("App crashes on save for all users", number=1)),
+            _item(make_issue("Fix typo in README", number=2, state="closed")),
+            _item(make_pr("feat: add CSV export", number=3)),
+            _item(make_issue("Slow: 100% CPU_usage when idle", number=4)),
+        ],
+    )
     repository.upsert_items(b["id"], [_item(make_issue("How do I install this?", number=1))])
     return a, b
 
@@ -117,7 +120,7 @@ def test_filters_combine(seeded):
     assert repository.list_items(filters={"state": "closed"})[0] == 1
     assert repository.list_items(filters={"category": "question"})[0] == 1
     total, items = repository.list_items(filters={"kind": "issue", "priority": "high"})
-    assert total == 1 and items[0]["title"] == "App crashes on save"
+    assert total == 1 and items[0]["title"] == "App crashes on save for all users"
 
 
 def test_ordering_is_priority_first(seeded):
@@ -150,3 +153,60 @@ def test_pagination(seeded):
 def test_unknown_filter_rejected(seeded):
     with pytest.raises(ValueError):
         repository.list_items(filters={"title; DROP TABLE items": "x"})
+
+
+# --- Reliability (Phase 6) -------------------------------------------------------------
+
+
+def test_concurrent_init_db_applies_each_migration_once(db_path):
+    """Several workers starting at once must not run a migration twice."""
+    import threading
+
+    barrier, errors = threading.Barrier(4), []
+
+    def start():
+        barrier.wait()
+        try:
+            init_db()
+        except Exception as exc:  # pragma: no cover - this is the failure being guarded
+            errors.append(exc)
+
+    threads = [threading.Thread(target=start) for _ in range(4)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert errors == []
+    assert get_schema_version() == SCHEMA_VERSION
+
+
+def test_failed_migration_leaves_previous_version(db_path, monkeypatch):
+    from app import database
+
+    init_db()
+    broken = [
+        *database.MIGRATIONS,
+        (SCHEMA_VERSION + 1, "ALTER TABLE repos ADD COLUMN extra TEXT;\nNOT SQL;"),
+    ]
+    monkeypatch.setattr(database, "MIGRATIONS", broken)
+    with pytest.raises(sqlite3.OperationalError):
+        init_db()
+    columns = {r[1] for r in sqlite3.connect(db_path).execute("PRAGMA table_info(repos)")}
+    assert "extra" not in columns  # the half-applied migration was rolled back
+    assert get_schema_version() == SCHEMA_VERSION
+
+
+def test_connection_rolls_back_on_error(db_path):
+    from app.database import get_connection
+
+    init_db()
+    with pytest.raises(RuntimeError), get_connection() as conn:
+        conn.execute("INSERT INTO repos (full_name, html_url) VALUES ('a/b', 'u')")
+        raise RuntimeError("boom")
+    assert repository.list_repos() == []
+
+
+def test_database_uses_write_ahead_logging(db_path):
+    init_db()
+    mode = sqlite3.connect(db_path).execute("PRAGMA journal_mode").fetchone()[0]
+    assert mode == "wal"

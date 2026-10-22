@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 
 def test_health(client):
     resp = client.get("/health")
@@ -83,3 +85,35 @@ def test_get_missing_issue_returns_404(client):
 def test_validation_rejects_empty_title(client):
     resp = client.post("/issues", json={"title": ""})
     assert resp.status_code == 422
+
+
+def test_batch_triage_is_limited_to_100_items(client):
+    # Regression (final audit): an unbounded batch let one request run the
+    # classifier thousands of times.
+    assert client.post("/triage/batch", json=[{"title": "x"}] * 100).status_code == 200
+    assert client.post("/triage/batch", json=[{"title": "x"}] * 101).status_code == 422
+
+
+# --- Cross-site request protection (pre-demo hardening) --------------------------------
+
+
+@pytest.mark.parametrize("content_type", [None, "text/plain", "application/x-www-form-urlencoded"])
+def test_write_bodies_must_be_json(client, content_type):
+    """A cross-site "simple" request (no preflight) cannot carry a JSON content type."""
+    headers = {"content-type": content_type} if content_type else {}
+    resp = client.post("/issues", content=b'{"title": "x"}', headers=headers)
+    assert resp.status_code == 415
+    assert client.get("/issues").json() == []
+
+
+def test_json_writes_and_bodyless_deletes_still_work(client):
+    created = client.post("/issues", json={"title": "Real issue"})
+    assert created.status_code == 201
+    assert client.delete(f"/issues/{created.json()['id']}").status_code == 204
+
+
+def test_security_headers(client):
+    resp = client.get("/")
+    assert resp.headers["x-content-type-options"] == "nosniff"
+    assert resp.headers["x-frame-options"] == "DENY"
+    assert resp.headers["referrer-policy"] == "no-referrer"

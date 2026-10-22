@@ -76,16 +76,20 @@ def test_fit_requires_two_classes():
 
 
 def test_binary_problem_supported():
-    m = fit(["crash error", "crash bug", "add feature", "add option"],
-            ["bug", "bug", "feature", "feature"], vectorizer_params=TINY_VECTORIZER)
+    m = fit(
+        ["crash error", "crash bug", "add feature", "add option"],
+        ["bug", "bug", "feature", "feature"],
+        vectorizer_params=TINY_VECTORIZER,
+    )
     assert m.coef.shape[0] == 2
     assert m.predict("crash").category == "bug"
 
 
 def test_tune_c_returns_grid_value():
     texts, labels = corpus()
-    best, scores = tune_c(texts, labels, grid=(0.1, 10.0), folds=2,
-                          vectorizer_params=TINY_VECTORIZER)
+    best, scores = tune_c(
+        texts, labels, grid=(0.1, 10.0), folds=2, vectorizer_params=TINY_VECTORIZER
+    )
     assert best in (0.1, 10.0)
     assert set(scores) == {0.1, 10.0}
     assert all(0.0 <= s <= 1.0 for s in scores.values())
@@ -100,7 +104,8 @@ def test_evaluate_hand_computed():
     m = evaluate(y_true, y_pred)
     assert m["accuracy"] == pytest.approx(0.75)
     assert m["per_class"]["bug"] == pytest.approx(
-        {"precision": 1.0, "recall": 0.5, "f1": 2 / 3, "support": 2})
+        {"precision": 1.0, "recall": 0.5, "f1": 2 / 3, "support": 2}
+    )
     assert m["per_class"]["feature"]["precision"] == pytest.approx(0.5)
     assert m["per_class"]["documentation"]["support"] == 0
     # macro average includes the empty documentation class (F1 = 0)
@@ -115,8 +120,9 @@ def test_evaluate_hand_computed():
 
 def test_coverage_at_thresholds():
     proba = np.array([[0.9, 0.1], [0.55, 0.45], [0.3, 0.7]])
-    rows = coverage_at_thresholds(proba, ["bug", "feature"], ["bug", "feature", "feature"],
-                                  thresholds=(0.5, 0.8))
+    rows = coverage_at_thresholds(
+        proba, ["bug", "feature"], ["bug", "feature", "feature"], thresholds=(0.5, 0.8)
+    )
     assert rows[0] == {"threshold": 0.5, "coverage": 1.0, "accuracy": pytest.approx(2 / 3)}
     assert rows[1] == {"threshold": 0.8, "coverage": pytest.approx(1 / 3), "accuracy": 1.0}
 
@@ -152,11 +158,17 @@ def test_tampered_weights_rejected(tmp_path):
 def test_pickled_payload_refused(tmp_path):
     """Even with a matching checksum, object (pickle) arrays are never loaded."""
     train_tiny_model(tmp_path / "m")
-    np.savez(tmp_path / "m.npz", terms=np.array([{"evil": 1}], dtype=object),
-             idf=np.ones(1), coef=np.ones((4, 1)), intercept=np.zeros(4),
-             classes=np.array(["bug", "feature", "documentation", "question"]))
+    np.savez(
+        tmp_path / "m.npz",
+        terms=np.array([{"evil": 1}], dtype=object),
+        idf=np.ones(1),
+        coef=np.ones((4, 1)),
+        intercept=np.zeros(4),
+        classes=np.array(["bug", "feature", "documentation", "question"]),
+    )
     meta = json.loads((tmp_path / "m.json").read_text())
     import hashlib
+
     meta["weights_sha256"] = hashlib.sha256((tmp_path / "m.npz").read_bytes()).hexdigest()
     (tmp_path / "m.json").write_text(json.dumps(meta))
     with pytest.raises(ModelError, match="could not read"):

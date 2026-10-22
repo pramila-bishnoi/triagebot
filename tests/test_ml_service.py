@@ -27,6 +27,7 @@ def test_missing_model_uses_rules(monkeypatch, tmp_path):
 
 def test_corrupt_model_uses_rules(monkeypatch, tmp_path, tiny_model_path):
     import shutil
+
     for ext in (".npz", ".json"):
         shutil.copy(tiny_model_path.with_suffix(ext), tmp_path / f"m{ext}")
     (tmp_path / "m.npz").write_bytes(b"garbage")
@@ -91,8 +92,12 @@ def test_pull_requests_use_rules(ml_model):
 
 @pytest.mark.parametrize(
     ("labels", "category"),
-    [(["bug"], "bug"), (["Enhancement", "good first issue"], "feature"),
-     (["docs"], "documentation"), (["question"], "question")],
+    [
+        (["bug"], "bug"),
+        (["Enhancement", "good first issue"], "feature"),
+        (["docs"], "documentation"),
+        (["question"], "question"),
+    ],
 )
 def test_maintainer_label_wins(ml_model, labels, category):
     result = service.classify("crash with traceback", labels=labels)
@@ -113,8 +118,9 @@ def test_maintainer_label_category():
     assert service.maintainer_label_category([]) is None
 
 
-@pytest.mark.parametrize(("p", "label"), [(0.95, "high"), (0.8, "high"), (0.7, "medium"),
-                                          (0.6, "medium"), (0.55, "low")])
+@pytest.mark.parametrize(
+    ("p", "label"), [(0.95, "high"), (0.8, "high"), (0.7, "medium"), (0.6, "medium"), (0.55, "low")]
+)
 def test_confidence_label(p, label):
     assert service.confidence_label(p) == label
 

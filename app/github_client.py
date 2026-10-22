@@ -15,6 +15,7 @@ from __future__ import annotations
 import re
 from collections.abc import Iterator
 from datetime import UTC, datetime
+from email.utils import parsedate_to_datetime
 from typing import Any
 
 import httpx
@@ -49,8 +50,9 @@ class RepoNotFoundError(GitHubError):
 class RateLimitError(GitHubError):
     """GitHub's primary or secondary rate limit was hit."""
 
-    def __init__(self, message: str, reset_at: datetime | None = None,
-                 retry_after: int | None = None) -> None:
+    def __init__(
+        self, message: str, reset_at: datetime | None = None, retry_after: int | None = None
+    ) -> None:
         super().__init__(message)
         self.reset_at = reset_at
         self.retry_after = retry_after
@@ -97,6 +99,9 @@ class GitHubClient:
             base_url=base_url, headers=headers, timeout=timeout, transport=transport
         )
         self.rate_limit_remaining: int | None = None
+        # GitHub's clock (from the Date header of the latest response). Sync
+        # cursors use it so a skewed local clock cannot cause missed updates.
+        self.server_time: datetime | None = None
 
     def close(self) -> None:
         self._client.close()
@@ -120,6 +125,12 @@ class GitHubClient:
         remaining = response.headers.get("x-ratelimit-remaining")
         if remaining is not None and remaining.isdigit():
             self.rate_limit_remaining = int(remaining)
+        date = response.headers.get("date")
+        if date:
+            try:
+                self.server_time = parsedate_to_datetime(date).astimezone(UTC)
+            except (TypeError, ValueError):
+                pass
 
         if response.is_success:
             return response
@@ -145,10 +156,13 @@ class GitHubClient:
                 reset = response.headers.get("x-ratelimit-reset")
                 reset_at = (
                     datetime.fromtimestamp(int(reset), tz=UTC)
-                    if reset and reset.isdigit() else None
+                    if reset and reset.isdigit()
+                    else None
                 )
-                hint = "" if response.request.headers.get("authorization") else (
-                    " Set GITHUB_TOKEN to raise the limit from 60 to 5,000 requests/hour."
+                hint = (
+                    ""
+                    if response.request.headers.get("authorization")
+                    else (" Set GITHUB_TOKEN to raise the limit from 60 to 5,000 requests/hour.")
                 )
                 raise RateLimitError(f"GitHub API rate limit exceeded.{hint}", reset_at=reset_at)
         if status == 401:
@@ -200,6 +214,98 @@ class GitHubClient:
             next_link = response.links.get("next")
             url = next_link["url"] if next_link else None
             params = None  # the "next" URL already carries the query string
+
+    def fetch_updated_since(
+        self, owner: str, name: str, *, since: str, limit: int = 500
+    ) -> tuple[list[dict[str, Any]], bool]:
+        """Issues and PRs in any state updated at or after ``since``, oldest update first.
+
+        Returns ``(items, complete)``; ``complete`` is False when ``limit`` was
+        reached before the end. Uses *keyset* pagination: every request asks
+        for the first page with ``since`` set to the last ``updated_at`` seen,
+        so an item updated while we page moves to the end instead of shifting
+        another item onto a page we already read. Overlapping items at the
+        boundary are dropped; an item updated again appears again (newer data).
+        """
+        seen: set[tuple[int, str]] = set()
+        items: list[dict[str, Any]] = []
+        cursor, page_no = since, 1
+        while True:
+            response = self._get(
+                f"/repos/{owner}/{name}/issues",
+                params={
+                    "state": "all",
+                    "sort": "updated",
+                    "direction": "asc",
+                    "since": cursor,
+                    "per_page": MAX_PER_PAGE,
+                    "page": page_no,
+                },
+            )
+            page = response.json()
+            if not isinstance(page, list):
+                raise GitHubUnavailableError("Unexpected response shape from GitHub.")
+            for raw in page:
+                key = (int(raw["number"]), str(raw.get("updated_at")))
+                if key in seen:
+                    continue
+                if len(items) >= limit:
+                    return items, False
+                seen.add(key)
+                items.append(raw)
+            if len(page) < MAX_PER_PAGE:
+                return items, True
+            last = str(page[-1].get("updated_at") or cursor)
+            # A full page that all shares one timestamp cannot move the cursor;
+            # step to the next page of that timestamp instead of looping.
+            cursor, page_no = (last, 1) if last != cursor else (cursor, page_no + 1)
+
+    # -- pull requests (read-only) -------------------------------------------------
+
+    def _paginate(
+        self, url: str, params: dict[str, Any] | None, limit: int
+    ) -> Iterator[dict[str, Any]]:
+        yielded = 0
+        next_url: str | None = url
+        while next_url and yielded < limit:
+            response = self._get(next_url, params=params)
+            page = response.json()
+            if not isinstance(page, list):
+                raise GitHubUnavailableError("Unexpected response shape from GitHub.")
+            for raw in page:
+                yield raw
+                yielded += 1
+                if yielded >= limit:
+                    return
+            link = response.links.get("next")
+            next_url = link["url"] if link else None
+            params = None
+
+    def iter_pulls(
+        self, owner: str, name: str, *, state: str = "open", limit: int = 100
+    ) -> Iterator[dict[str, Any]]:
+        """Pull requests from the pulls list (branches, pending review requests)."""
+        params = {
+            "state": state,
+            "sort": "updated",
+            "direction": "desc",
+            "per_page": min(MAX_PER_PAGE, limit),
+        }
+        yield from self._paginate(f"/repos/{owner}/{name}/pulls", params, limit)
+
+    def get_pull(self, owner: str, name: str, number: int) -> dict[str, Any]:
+        """One pull request with size fields (additions, deletions, changed_files)."""
+        return self._get(f"/repos/{owner}/{name}/pulls/{number}").json()
+
+    def list_reviews(
+        self, owner: str, name: str, number: int, limit: int = 300
+    ) -> list[dict[str, Any]]:
+        """Submitted reviews of a pull request, oldest first."""
+        return list(
+            self._paginate(
+                f"/repos/{owner}/{name}/pulls/{number}/reviews", {"per_page": MAX_PER_PAGE}, limit
+            )
+        )
 
 
 def get_github_client() -> Iterator[GitHubClient]:

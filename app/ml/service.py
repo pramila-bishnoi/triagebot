@@ -13,7 +13,8 @@ Decision order for each item:
 
 Every fallback adds a note to the explanation saying why.
 
-Priority is always computed by the rule engine for the final category.
+Priority is always computed by :mod:`app.priority` for the final category
+(a maintainer's explicit priority label is kept as-is).
 """
 
 from __future__ import annotations
@@ -118,33 +119,46 @@ def classify(
     labels: list[str] | None = None,
     reactions: int = 0,
     comments: int = 0,
+    is_draft: bool = False,
 ) -> Classification:
     """Category (with source and score) + priority for an issue or PR."""
     labels = labels or []
-    common = {"kind": kind, "labels": labels, "reactions": reactions, "comments": comments}
+    common = {
+        "kind": kind,
+        "labels": labels,
+        "reactions": reactions,
+        "comments": comments,
+        "is_draft": is_draft,
+    }
 
     if kind == "pr":
-        return _with_note(classify_item(title, body, **common),
-                          "rule engine used: the ML model is trained on issues only")
+        return _with_note(
+            classify_item(title, body, **common),
+            "rule engine used: the ML model is trained on issues only",
+        )
 
     model, reason = load_model()
     if model is None:
-        return _with_note(classify_item(title, body, **common),
-                          f"rule engine used: {reason}")
+        return _with_note(classify_item(title, body, **common), f"rule engine used: {reason}")
 
     label_hit = maintainer_label_category(labels)
     if label_hit:
         category, label = label_hit
         result = classify_item(title, body, **common, category_override=category)
-        return replace(result, category_source="github_label", category_confidence="high",
-                       category_reasons=[f"maintainer label '{label}' -> {category}"])
+        return replace(
+            result,
+            category_source="github_label",
+            category_confidence="high",
+            category_reasons=[f"maintainer label '{label}' -> {category}"],
+        )
 
     try:
         prediction = model.predict(title, body)
     except Exception:  # fall back rather than fail an import
         log.exception("ML prediction failed")
-        return _with_note(classify_item(title, body, **common),
-                          "rule engine used: ML prediction failed")
+        return _with_note(
+            classify_item(title, body, **common), "rule engine used: ML prediction failed"
+        )
 
     threshold = get_settings().ml_threshold
     if prediction.confidence < threshold:

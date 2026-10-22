@@ -20,13 +20,16 @@ SHIPPED_MODEL = ROOT / "models" / "issue_classifier"
 
 @pytest.fixture()
 def repo_items(fake_github):
-    fake_github.add_repo("acme/widgets", [
-        make_issue("crash with traceback when saving file", number=1),
-        make_issue("typo in tutorial docs page", number=2),
-        make_issue("zzzz qqqq", number=3),                       # ML unsure -> rules
-        make_issue("whatever", number=4, labels=["question"]),   # maintainer label
-        make_pr("fix: crash on save", number=5),                 # PR -> rules
-    ])
+    fake_github.add_repo(
+        "acme/widgets",
+        [
+            make_issue("crash with traceback when saving file", number=1),
+            make_issue("typo in tutorial docs page", number=2),
+            make_issue("zzzz qqqq", number=3),  # ML unsure -> rules
+            make_issue("whatever", number=4, labels=["question"]),  # maintainer label
+            make_pr("fix: crash on save", number=5),  # PR -> rules
+        ],
+    )
     return fake_github
 
 
@@ -62,8 +65,9 @@ def test_source_filter(client, repo_items, ml_model):
     assert client.get("/items", params={"source": "magic"}).status_code == 422
 
 
-def test_reimport_after_enabling_ml_updates_source(client, repo_items, monkeypatch,
-                                                   tiny_model_path):
+def test_reimport_after_enabling_ml_updates_source(
+    client, repo_items, monkeypatch, tiny_model_path
+):
     assert _import(client)[1]["category_source"] == "rules"
     monkeypatch.setenv("TRIAGEBOT_ML_ENABLED", "1")
     monkeypatch.setenv("TRIAGEBOT_MODEL_PATH", str(tiny_model_path))
@@ -72,7 +76,7 @@ def test_reimport_after_enabling_ml_updates_source(client, repo_items, monkeypat
 
 def test_triage_endpoint_includes_category(client, ml_model):
     data = client.post("/triage", json={"title": "crash with traceback"}).json()
-    assert data["severity"] == "high"          # original fields unchanged
+    assert data["severity"] == "high"  # original fields unchanged
     assert data["category"] == "bug"
     assert data["category_source"] == "ml"
     assert data["category_reasons"]
@@ -86,8 +90,9 @@ def test_triage_endpoint_without_model(client):
 
 
 def test_batch_triage_includes_category(client, ml_model):
-    data = client.post("/triage/batch", json=[{"title": "crash traceback"},
-                                              {"title": "add support for dark mode"}]).json()
+    data = client.post(
+        "/triage/batch", json=[{"title": "crash traceback"}, {"title": "add support for dark mode"}]
+    ).json()
     assert [d["category"] for d in data] == ["bug", "feature"]
 
 
@@ -124,8 +129,9 @@ def test_model_endpoint_reports_configured_threshold(client, ml_model, monkeypat
     assert client.get("/model").json()["threshold"] == 0.7
 
 
-@pytest.mark.skipif(not SHIPPED_MODEL.with_suffix(".npz").exists(),
-                    reason="trained model not present")
+@pytest.mark.skipif(
+    not SHIPPED_MODEL.with_suffix(".npz").exists(), reason="trained model not present"
+)
 def test_model_endpoint_serves_shipped_metrics(client, monkeypatch):
     """The dashboard's status line shows exactly the recorded evaluation numbers."""
     monkeypatch.setenv("TRIAGEBOT_ML_ENABLED", "1")
@@ -133,8 +139,9 @@ def test_model_endpoint_serves_shipped_metrics(client, monkeypatch):
     data = client.get("/model").json()
     assert data["available"] is True
     assert data["test_macro_f1"] == meta["evaluation"]["test"]["macro_f1"]
-    assert data["rules_baseline_macro_f1"] == (
-        meta["evaluation"]["rules_baseline_test"]["macro_f1"])
+    assert (
+        data["rules_baseline_macro_f1"] == (meta["evaluation"]["rules_baseline_test"]["macro_f1"])
+    )
     assert data["unseen_repo_macro_f1"] == meta["evaluation"]["leave_one_repo_out_mean_macro_f1"]
     assert data["train_size"] == meta["training"]["train"]
 
@@ -150,13 +157,15 @@ def test_source_filter_combines_with_others_and_paginates(client, repo_items, ml
     _import(client)
     page = client.get("/items", params={"source": "ml", "category": "bug", "limit": 1}).json()
     assert page["total"] == 1 and page["items"][0]["number"] == 1
-    assert client.get("/items", params={"source": "github_label", "q": "whatever"}).json()[
-        "total"] == 1
+    assert (
+        client.get("/items", params={"source": "github_label", "q": "whatever"}).json()["total"]
+        == 1
+    )
 
 
 def test_dashboard_page_has_phase2_controls(client):
     html = client.get("/").text
-    for marker in ('id="fSource"', 'id="modelStatus"', "sourceChip(", 'fetch(path', "/model"):
+    for marker in ('id="fSource"', 'id="modelStatus"', "sourceChip(", "fetch(path", "/model"):
         assert marker in html
 
 
@@ -166,6 +175,7 @@ def test_dashboard_page_has_phase2_controls(client):
 def test_v2_database_upgrades_to_v3(db_path):
     conn = sqlite3.connect(db_path)
     from app.database import MIGRATIONS
+
     for version, sql in MIGRATIONS[:2]:
         conn.executescript(f"BEGIN;{sql}PRAGMA user_version = {version};COMMIT;")
     conn.execute("INSERT INTO repos (full_name, html_url) VALUES ('a/b', 'https://github.com/a/b')")
@@ -195,31 +205,47 @@ def test_training_script_end_to_end(tmp_path):
     for repo in ("org/one", "org/two"):
         for category, sentences in TINY_CORPUS.items():
             for n, sentence in enumerate(sentences):
-                rows.append({"repo": repo, "number": n, "category": category,
-                             "title": f"{sentence} {repo}", "body": ""})
+                rows.append(
+                    {
+                        "repo": repo,
+                        "number": n,
+                        "category": category,
+                        "title": f"{sentence} {repo}",
+                        "body": "",
+                    }
+                )
     dataset = tmp_path / "issues.jsonl"
     dataset.write_text("\n".join(json.dumps(r) for r in rows))
 
-    meta = run_training(dataset, tmp_path / "model", tmp_path / "REPORT.md", seed=1,
-                        folds=2, grid=(1.0, 10.0), vectorizer_params=TINY_VECTORIZER)
+    meta = run_training(
+        dataset,
+        tmp_path / "model",
+        tmp_path / "REPORT.md",
+        seed=1,
+        folds=2,
+        grid=(1.0, 10.0),
+        vectorizer_params=TINY_VECTORIZER,
+    )
 
     assert meta["training"]["train"] + meta["training"]["test"] == len(rows)
     assert meta["evaluation"]["test"]["n"] == meta["training"]["test"]
-    assert {r["repo"] for r in meta["evaluation"]["leave_one_repo_out"]} == {"org/one",
-                                                                            "org/two"}
+    assert {r["repo"] for r in meta["evaluation"]["leave_one_repo_out"]} == {"org/one", "org/two"}
     report = (tmp_path / "REPORT.md").read_text()
     assert "Confusion matrix" in report and "rule engine" in report
     loaded = IssueClassifier.load(tmp_path / "model")
     assert loaded.metadata["evaluation"]["test"]["macro_f1"] == pytest.approx(
-        meta["evaluation"]["test"]["macro_f1"])
+        meta["evaluation"]["test"]["macro_f1"]
+    )
 
 
 def test_training_dedupes_before_split(tmp_path):
     from scripts.train_classifier import dedupe, load_dataset
 
     path = tmp_path / "d.jsonl"
-    rows = [{"repo": "a/b", "number": i, "category": "bug", "title": "Same  Title",
-             "body": ""} for i in range(3)]
+    rows = [
+        {"repo": "a/b", "number": i, "category": "bug", "title": "Same  Title", "body": ""}
+        for i in range(3)
+    ]
     path.write_text("\n".join(json.dumps(r) for r in rows))
     kept, removed = dedupe(load_dataset(path))
     assert len(kept) == 1 and removed == 2
@@ -235,8 +261,9 @@ def test_training_script_requires_dataset(tmp_path):
 # --- the shipped model --------------------------------------------------------------
 
 
-@pytest.mark.skipif(not SHIPPED_MODEL.with_suffix(".npz").exists(),
-                    reason="trained model not present")
+@pytest.mark.skipif(
+    not SHIPPED_MODEL.with_suffix(".npz").exists(), reason="trained model not present"
+)
 def test_shipped_model_loads_and_is_sane():
     model = IssueClassifier.load(SHIPPED_MODEL)
     assert sorted(model.classes) == ["bug", "documentation", "feature", "question"]

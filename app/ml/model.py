@@ -27,8 +27,14 @@ FORMAT_VERSION = 1
 
 # Vectorizer settings that affect inference (and therefore must be saved).
 INFERENCE_PARAMS = (
-    "lowercase", "strip_accents", "token_pattern", "ngram_range",
-    "sublinear_tf", "norm", "use_idf", "smooth_idf",
+    "lowercase",
+    "strip_accents",
+    "token_pattern",
+    "ngram_range",
+    "sublinear_tf",
+    "norm",
+    "use_idf",
+    "smooth_idf",
 )
 
 
@@ -39,8 +45,8 @@ class ModelError(Exception):
 @dataclass(frozen=True)
 class Prediction:
     category: str
-    confidence: float                     # probability of ``category``
-    probabilities: dict[str, float]       # all classes, sums to 1
+    confidence: float  # probability of ``category``
+    probabilities: dict[str, float]  # all classes, sums to 1
     top_terms: list[tuple[str, float]] = field(default_factory=list)
 
     def explanation(self) -> list[str]:

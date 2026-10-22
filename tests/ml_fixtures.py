@@ -71,8 +71,16 @@ def corpus() -> tuple[list[str], list[str]]:
 
 def train_tiny_model(base: Path) -> IssueClassifier:
     texts, labels = corpus()
-    model = fit(texts, labels, C=10.0, vectorizer_params=TINY_VECTORIZER,
-                metadata={"model": "tiny test model", "trained_at": "test",
-                          "evaluation": {"test": {"accuracy": 1.0, "macro_f1": 1.0}}})
+    model = fit(
+        texts,
+        labels,
+        C=10.0,
+        vectorizer_params=TINY_VECTORIZER,
+        metadata={
+            "model": "tiny test model",
+            "trained_at": "test",
+            "evaluation": {"test": {"accuracy": 1.0, "macro_f1": 1.0}},
+        },
+    )
     model.save(base)
     return model

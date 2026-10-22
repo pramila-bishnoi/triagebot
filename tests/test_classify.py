@@ -22,9 +22,7 @@ def test_category(title, category):
 
 
 def test_github_label_outweighs_body_keywords():
-    result = classify_item(
-        "Dark mode", "it would be nice, no error here", labels=["documentation"]
-    )
+    result = classify_item("Dark mode", "it would be nice, no error here", labels=["documentation"])
     assert result.category == "documentation"
     assert any("GitHub label 'documentation'" in r for r in result.category_reasons)
 
@@ -90,13 +88,17 @@ def test_body_match_counts_less_than_title_match():
 
 
 def test_engagement_and_labels_raise_priority():
+    # Phase 3: popularity supports a priority but can never make it high on its own;
+    # an explicit maintainer priority label is a human decision and wins.
+    # Phase 3.1: a plain feature request leans low (category 'feature' -1).
     quiet = classify_item("Add CSV export")
     popular = classify_item("Add CSV export", reactions=25, comments=12)
     labelled = classify_item("Add CSV export", labels=["priority: high"])
-    assert quiet.priority == "medium"
-    assert popular.priority == "high"
+    assert quiet.priority == "low"
+    assert popular.priority == "medium"
     assert labelled.priority == "high"
-    assert any("25 reactions (+2)" in r for r in popular.priority_reasons)
+    assert labelled.priority_source == "maintainer_label"
+    assert any("25 reactions (+1" in r for r in popular.priority_reasons)
 
 
 def test_low_priority_label():
@@ -104,9 +106,13 @@ def test_low_priority_label():
 
 
 def test_priority_explanation_ends_with_total():
-    reasons = classify_item("App crashes").priority_reasons
-    assert reasons[-1].startswith("total score +3")
+    reasons = classify_item("App crashes for all users").priority_reasons
+    assert reasons[-1].startswith("total score +4")
     assert reasons[-1].endswith("-> high")
+    # One kind of evidence ("crash") is not enough for high (Phase 3).
+    capped = classify_item("App crashes").priority_reasons
+    assert capped[-1].startswith("total score +3")
+    assert capped[-1].endswith("-> medium (capped)")
 
 
 def test_owner_hint_is_optional():

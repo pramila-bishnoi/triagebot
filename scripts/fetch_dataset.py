@@ -44,40 +44,91 @@ RAW_DIR = DATA_DIR / "raw"
 ISSUES_FILE = DATA_DIR / "issues.jsonl"
 MANIFEST_FILE = DATA_DIR / "dataset_manifest.csv"
 
-CUTOFF = "2026-09-01"   # only issues created before this date
-PER_LABEL = 100         # newest N issues per (repo, category) — one search page
+CUTOFF = "2026-09-01"  # only issues created before this date
+PER_LABEL = 100  # newest N issues per (repo, category) — one search page
 
 # repo -> (code licence, {category: maintainer label})
 REPOS: dict[str, tuple[str, dict[str, str]]] = {
-    "pandas-dev/pandas": ("BSD-3-Clause", {
-        "bug": "Bug", "feature": "Enhancement", "documentation": "Docs",
-        "question": "Usage Question"}),
-    "pytest-dev/pytest": ("MIT", {
-        "bug": "type: bug", "feature": "type: enhancement", "documentation": "type: docs",
-        "question": "type: question"}),
-    "microsoft/terminal": ("MIT", {
-        "bug": "Issue-Bug", "feature": "Issue-Feature", "documentation": "Issue-Docs",
-        "question": "Issue-Question"}),
-    "microsoft/TypeScript": ("Apache-2.0", {
-        "bug": "Bug", "feature": "Suggestion", "documentation": "Docs",
-        "question": "Question"}),
-    "python-poetry/poetry": ("MIT", {
-        "bug": "kind/bug", "feature": "kind/feature", "documentation": "area/docs",
-        "question": "kind/question"}),
-    "pypa/pip": ("MIT", {
-        "bug": "type: bug", "feature": "type: enhancement", "documentation": "type: docs",
-        "question": "type: support"}),
-    "psf/black": ("MIT", {
-        "bug": "T: bug", "feature": "T: enhancement", "documentation": "T: documentation",
-        "question": "T: user support"}),
-    "tauri-apps/tauri": ("Apache-2.0 OR MIT", {
-        "bug": "type: bug", "feature": "type: feature request",
-        "documentation": "type: documentation", "question": "type: question"}),
-    "pydantic/pydantic": ("MIT", {
-        "bug": "bug V2", "feature": "feature request", "documentation": "documentation",
-        "question": "question"}),
-    "denoland/deno": ("MIT", {
-        "bug": "bug", "feature": "feat", "documentation": "docs", "question": "question"}),
+    "pandas-dev/pandas": (
+        "BSD-3-Clause",
+        {
+            "bug": "Bug",
+            "feature": "Enhancement",
+            "documentation": "Docs",
+            "question": "Usage Question",
+        },
+    ),
+    "pytest-dev/pytest": (
+        "MIT",
+        {
+            "bug": "type: bug",
+            "feature": "type: enhancement",
+            "documentation": "type: docs",
+            "question": "type: question",
+        },
+    ),
+    "microsoft/terminal": (
+        "MIT",
+        {
+            "bug": "Issue-Bug",
+            "feature": "Issue-Feature",
+            "documentation": "Issue-Docs",
+            "question": "Issue-Question",
+        },
+    ),
+    "microsoft/TypeScript": (
+        "Apache-2.0",
+        {"bug": "Bug", "feature": "Suggestion", "documentation": "Docs", "question": "Question"},
+    ),
+    "python-poetry/poetry": (
+        "MIT",
+        {
+            "bug": "kind/bug",
+            "feature": "kind/feature",
+            "documentation": "area/docs",
+            "question": "kind/question",
+        },
+    ),
+    "pypa/pip": (
+        "MIT",
+        {
+            "bug": "type: bug",
+            "feature": "type: enhancement",
+            "documentation": "type: docs",
+            "question": "type: support",
+        },
+    ),
+    "psf/black": (
+        "MIT",
+        {
+            "bug": "T: bug",
+            "feature": "T: enhancement",
+            "documentation": "T: documentation",
+            "question": "T: user support",
+        },
+    ),
+    "tauri-apps/tauri": (
+        "Apache-2.0 OR MIT",
+        {
+            "bug": "type: bug",
+            "feature": "type: feature request",
+            "documentation": "type: documentation",
+            "question": "type: question",
+        },
+    ),
+    "pydantic/pydantic": (
+        "MIT",
+        {
+            "bug": "bug V2",
+            "feature": "feature request",
+            "documentation": "documentation",
+            "question": "question",
+        },
+    ),
+    "denoland/deno": (
+        "MIT",
+        {"bug": "bug", "feature": "feat", "documentation": "docs", "question": "question"},
+    ),
 }
 
 
@@ -85,12 +136,12 @@ def _cache_path(repo: str, category: str) -> Path:
     return RAW_DIR / f"{repo.replace('/', '__')}__{category}.json"
 
 
-def _search(client: httpx.Client, query: str) -> dict:
+def _search(client: httpx.Client, query: str, per_page: int = PER_LABEL) -> dict:
     """One search request, waiting out rate limits instead of failing."""
     while True:
         resp = client.get(
             "/search/issues",
-            params={"q": query, "sort": "created", "order": "desc", "per_page": PER_LABEL},
+            params={"q": query, "sort": "created", "order": "desc", "per_page": per_page},
         )
         if resp.status_code in (403, 429) and resp.headers.get("x-ratelimit-remaining") == "0":
             reset = int(resp.headers.get("x-ratelimit-reset", time.time() + 60))
@@ -134,8 +185,9 @@ def build() -> list[dict]:
                 if "pull_request" in raw:
                     continue
                 names = [lbl["name"] for lbl in raw.get("labels", [])]
-                categories = {label_to_category[n.lower()] for n in names
-                              if n.lower() in label_to_category}
+                categories = {
+                    label_to_category[n.lower()] for n in names if n.lower() in label_to_category
+                }
                 key = (repo, raw["number"])
                 if len(categories) != 1:
                     if key not in records:
@@ -167,8 +219,9 @@ def write(rows: list[dict]) -> None:
         writer = csv.writer(fh)
         writer.writerow(["repo", "number", "category", "created_at", "html_url"])
         for row in rows:
-            writer.writerow([row["repo"], row["number"], row["category"],
-                             row["created_at"], row["html_url"]])
+            writer.writerow(
+                [row["repo"], row["number"], row["category"], row["created_at"], row["html_url"]]
+            )
     print(f"wrote {ISSUES_FILE.relative_to(ROOT)} and {MANIFEST_FILE.relative_to(ROOT)}")
 
 

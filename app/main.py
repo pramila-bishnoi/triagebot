@@ -6,16 +6,17 @@ importer, and the HTTP API, and serves a tiny static web UI at ``/``.
 
 from __future__ import annotations
 
+import logging
 import os
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, HTTPException, Query, Response
-from fastapi.responses import FileResponse
+from fastapi import Body, Depends, FastAPI, HTTPException, Query, Request, Response
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from app import __version__, importer, repository, triage
+from app import __version__, duplicates, importer, pr_insights, repository, triage
 from app.database import init_db
 from app.github_client import (
     GitHubAuthError,
@@ -31,19 +32,38 @@ from app.schemas import (
     BatchTriageItem,
     Category,
     CategorySource,
+    DuplicateAnalysis,
+    DuplicateDecision,
+    DuplicateRecord,
+    DuplicateRefreshRequest,
+    DuplicateSuggestion,
     ImportResult,
     Issue,
     IssueIn,
     IssueUpdate,
+    ItemDuplicates,
     ItemPage,
     Kind,
     ModelStatus,
+    PRDetailsRequest,
+    PRDetailsResult,
+    PRFlag,
     Priority,
+    PRPage,
+    PRSize,
+    PRStatus,
+    PRSummary,
+    PRThresholds,
+    PRView,
     Repo,
     RepoImportRequest,
+    RepoSyncRequest,
     State,
+    SyncResult,
     TriageSuggestion,
 )
+
+log = logging.getLogger(__name__)
 
 STATIC_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static")
 
@@ -66,6 +86,37 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+_UNSAFE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+
+
+@app.middleware("http")
+async def json_only_writes_and_security_headers(request: Request, call_next):
+    """Reject non-JSON write bodies; add basic browser security headers.
+
+    A web page on another site can send a "simple" cross-origin POST (a form, or
+    ``fetch`` with ``mode: "no-cors"``) whose body has no JSON content type. Such
+    requests skip the browser's CORS preflight, and FastAPI parses a body with no
+    content type as JSON — so without this check any site a user visits could
+    create issues or start imports against a TriageBot running on their machine.
+    Requiring ``application/json`` forces a preflight, which fails because the
+    app sends no CORS headers. This is **not** authentication: anyone who can
+    reach the server directly can still call every endpoint.
+    """
+    has_body = (
+        request.headers.get("content-length", "0") != "0" or "transfer-encoding" in request.headers
+    )
+    if request.method in _UNSAFE_METHODS and has_body:
+        content_type = request.headers.get("content-type", "").split(";")[0].strip().lower()
+        if content_type != "application/json":
+            return JSONResponse(
+                status_code=415, content={"detail": "Request body must be application/json."}
+            )
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "no-referrer")
+    return response
+
 
 @app.get("/health", tags=["meta"])
 def health() -> dict:
@@ -74,7 +125,7 @@ def health() -> dict:
 
 
 def _category_fields(title: str, body: str) -> dict:
-    """ML category (with rule fallback) for a manually entered issue."""
+    """ML category (with rule fallback) and suggested priority for a manual issue."""
     result = ml_service.classify(title, body, kind="issue")
     return {
         "category": result.category,
@@ -82,6 +133,9 @@ def _category_fields(title: str, body: str) -> dict:
         "category_source": result.category_source,
         "category_score": result.category_score,
         "category_reasons": result.category_reasons,
+        "priority": result.priority,
+        "priority_source": result.priority_source,
+        "priority_reasons": result.priority_reasons,
     }
 
 
@@ -98,9 +152,14 @@ def triage_preview(payload: IssueIn) -> TriageSuggestion:
     )
 
 
+MAX_BATCH = 100  # bounds the work one request can trigger (each item runs the ML model)
+
+
 @app.post("/triage/batch", response_model=list[BatchTriageItem], tags=["triage"])
-def triage_batch(payload: list[IssueIn]) -> list[BatchTriageItem]:
-    """Triage many incoming issues at once (e.g. a backlog import)."""
+def triage_batch(
+    payload: Annotated[list[IssueIn], Body(max_length=MAX_BATCH)],
+) -> list[BatchTriageItem]:
+    """Triage up to 100 issues at once (e.g. a backlog import)."""
     items: list[BatchTriageItem] = []
     for issue in payload:
         result = triage.triage(issue.title, issue.body)
@@ -231,6 +290,58 @@ def import_repo(
         issues=summary.issues,
         pull_requests=summary.pull_requests,
         rate_limit_remaining=summary.rate_limit_remaining,
+        duplicates=_refresh_duplicates(summary.repo),
+        pr_metadata=summary.pr_metadata,
+    )
+
+
+def _refresh_duplicates(repo: dict) -> DuplicateAnalysis | None:
+    """Re-run duplicate detection after new data arrived; never fails the caller.
+
+    The analysis writes in one transaction, so a failure leaves the previous
+    suggestions (and every maintainer decision) as they were.
+    """
+    try:
+        return DuplicateAnalysis(repo=repo["full_name"], **duplicates.analyze_repo(repo["id"]))
+    except Exception:
+        log.exception("duplicate analysis failed for %s", repo["full_name"])
+        return None
+
+
+@app.post("/repos/sync", response_model=SyncResult, tags=["github"])
+def sync_repo(
+    payload: RepoSyncRequest,
+    client: Annotated[GitHubClient, Depends(get_github_client)],
+) -> SyncResult:
+    """Update an imported repository with everything changed on GitHub since its last sync.
+
+    Fetches issues and PRs in **any** state updated since the repository was
+    last known to be current (so items closed or reopened on GitHub change state
+    here), oldest change first, up to ``limit``. Read-only towards GitHub; a
+    failed sync stores nothing.
+    """
+    repo = repository.get_repo_by_name(payload.repo)
+    if repo is None:
+        raise HTTPException(status_code=404, detail="Repository has not been imported.")
+    try:
+        summary = importer.sync_repo(client, repo, limit=payload.limit)
+    except GitHubError as exc:
+        raise _github_http_error(exc) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return SyncResult(
+        repo=Repo(**summary.repo),
+        since=summary.since,
+        fetched=summary.fetched,
+        added=summary.added,
+        updated=summary.updated,
+        closed=summary.closed,
+        reopened=summary.reopened,
+        complete=summary.complete,
+        synced_through=summary.synced_through,
+        rate_limit_remaining=summary.rate_limit_remaining,
+        duplicates=_refresh_duplicates(summary.repo),
+        pr_metadata=summary.pr_metadata,
     )
 
 
@@ -269,6 +380,166 @@ def list_items(
         offset=offset,
     )
     return ItemPage(total=total, limit=limit, offset=offset, items=rows)
+
+
+# --- Duplicate detection (suggestions only; nothing is changed on GitHub) ----------
+
+
+@app.post("/duplicates/refresh", response_model=DuplicateAnalysis, tags=["duplicates"])
+def refresh_duplicates(payload: DuplicateRefreshRequest) -> DuplicateAnalysis:
+    """Run duplicate detection for an imported repository (skipped if nothing changed)."""
+    repo = repository.get_repo_by_name(payload.repo)
+    if repo is None:
+        raise HTTPException(status_code=404, detail="Repository has not been imported.")
+    return DuplicateAnalysis(
+        repo=repo["full_name"], **duplicates.analyze_repo(repo["id"], force=payload.force)
+    )
+
+
+@app.get("/items/{item_id}/duplicates", response_model=ItemDuplicates, tags=["duplicates"])
+def item_duplicates(item_id: int) -> ItemDuplicates:
+    """Possible duplicates of one imported issue, with explanations and review status."""
+    item = repository.get_item(item_id)
+    if item is None:
+        raise HTTPException(status_code=404, detail="Item not found")
+    note = None
+    if item["kind"] == "pr":
+        note = "Duplicate detection compares issues only; pull requests are not compared."
+    suggestions = [
+        DuplicateSuggestion(**{**s, "explanation": duplicates.explain(s)})
+        for s in repository.duplicates_for_item(item_id)
+    ]
+    return ItemDuplicates(
+        item_id=item["id"],
+        number=item["number"],
+        title=item["title"],
+        threshold=duplicates.current_threshold(),
+        note=note,
+        suggestions=suggestions,
+    )
+
+
+@app.patch("/duplicates/{suggestion_id}", response_model=DuplicateRecord, tags=["duplicates"])
+def decide_duplicate(suggestion_id: int, payload: DuplicateDecision) -> DuplicateRecord:
+    """Record a maintainer's review: confirmed, rejected, or back to pending."""
+    record = repository.set_suggestion_status(suggestion_id, payload.status)
+    if record is None:
+        raise HTTPException(status_code=404, detail="Suggestion not found")
+    return DuplicateRecord(**record)
+
+
+# --- Pull-request insights (read-only) --------------------------------------------
+
+
+def _pr_view(row: dict, now, thresholds) -> PRView:
+    result = pr_insights.analyze(row, now=now, thresholds=thresholds)
+    return PRView(
+        **{k: row.get(k) for k in PRView.model_fields if k in row},
+        status=result.status,
+        age_days=result.age_days,
+        idle_days=result.idle_days,
+        lines_changed=result.lines_changed,
+        size=result.size,
+        flags=result.flags,
+        insights=[vars(i) for i in result.insights],
+    )
+
+
+_PR_SORTS = {
+    "updated": lambda v: v.updated_at,
+    "age": lambda v: v.age_days or 0.0,
+    "idle": lambda v: v.idle_days or 0.0,
+    "size": lambda v: v.lines_changed if v.lines_changed is not None else -1,
+}
+
+
+@app.get("/prs", response_model=PRPage, tags=["pull requests"])
+def list_prs(
+    repo: Annotated[str | None, Query(max_length=200, description="owner/name")] = None,
+    status: PRStatus | None = None,
+    author: Annotated[str | None, Query(max_length=100)] = None,
+    flag: PRFlag | None = None,
+    size: PRSize | None = None,
+    min_age_days: Annotated[float | None, Query(ge=0)] = None,
+    max_age_days: Annotated[float | None, Query(ge=0)] = None,
+    q: Annotated[str | None, Query(max_length=200, description="Search title/body/#number")] = None,
+    sort: Annotated[str, Query(pattern="^(updated|age|idle|size)$")] = "updated",
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> PRPage:
+    """Imported pull requests with insights (newest activity first by default).
+
+    ``summary`` counts cover every PR matching repo / author / search, so the
+    dashboard can show totals while the list is filtered further.
+    """
+    now, thresholds = pr_insights.utcnow(), pr_insights.thresholds_from_env()
+    views = [
+        _pr_view(row, now, thresholds) for row in repository.list_prs(repo=repo, author=author, q=q)
+    ]
+    summary = PRSummary(
+        total=len(views),
+        **{s: sum(v.status == s for v in views) for s in ("open", "draft", "merged", "closed")},
+        **{
+            f: sum(f in v.flags for v in views)
+            for f in (
+                "stale",
+                "awaiting_review",
+                "large",
+                "changes_requested",
+                "approved",
+                "no_reviews",
+            )
+        },
+        with_details=sum(v.details_fetched_at is not None for v in views),
+    )
+    if status:
+        views = [v for v in views if v.status == status]
+    if flag:
+        views = [v for v in views if flag in v.flags]
+    if size:
+        views = [v for v in views if (v.size or "unknown") == size]
+    if min_age_days is not None:
+        views = [v for v in views if v.age_days is not None and v.age_days >= min_age_days]
+    if max_age_days is not None:
+        views = [v for v in views if v.age_days is not None and v.age_days <= max_age_days]
+    views.sort(key=_PR_SORTS[sort], reverse=True)
+    return PRPage(
+        total=len(views),
+        limit=limit,
+        offset=offset,
+        summary=summary,
+        thresholds=PRThresholds(**vars(thresholds)),
+        items=views[offset : offset + limit],
+    )
+
+
+@app.get("/prs/{item_id}", response_model=PRView, tags=["pull requests"])
+def get_pr(item_id: int) -> PRView:
+    row = repository.get_pr(item_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Pull request not found")
+    return _pr_view(row, pr_insights.utcnow(), pr_insights.thresholds_from_env())
+
+
+@app.post("/prs/details", response_model=PRDetailsResult, tags=["pull requests"])
+def load_pr_details(
+    payload: PRDetailsRequest,
+    client: Annotated[GitHubClient, Depends(get_github_client)],
+) -> PRDetailsResult:
+    """Load size and review data for up to ``limit`` PRs (2 read-only GitHub requests each).
+
+    Stops cleanly on a GitHub rate limit; whatever was loaded is kept.
+    """
+    repo = repository.get_repo_by_name(payload.repo)
+    if repo is None:
+        raise HTTPException(status_code=404, detail="Repository has not been imported.")
+    try:
+        result = importer.fetch_pr_details(
+            client, repo, limit=payload.limit, only_open=payload.only_open, force=payload.force
+        )
+    except GitHubError as exc:
+        raise _github_http_error(exc) from exc
+    return PRDetailsResult(**result)
 
 
 @app.get("/model", response_model=ModelStatus, tags=["ml"])

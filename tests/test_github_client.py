@@ -34,8 +34,16 @@ def test_parse_repo_valid(value, expected):
 
 @pytest.mark.parametrize(
     "value",
-    ["", "fastapi", "a/b/c d", "-bad/repo", "owner/..", "https://gitlab.com/a/b",
-     "owner/repo name", "../../etc/passwd"],
+    [
+        "",
+        "fastapi",
+        "a/b/c d",
+        "-bad/repo",
+        "owner/..",
+        "https://gitlab.com/a/b",
+        "owner/repo name",
+        "../../etc/passwd",
+    ],
 )
 def test_parse_repo_invalid(value):
     with pytest.raises(InvalidRepoError):
@@ -134,8 +142,9 @@ def test_primary_rate_limit():
 
 def test_secondary_rate_limit_uses_retry_after():
     fake = FakeGitHub()
-    fake.fail_with = httpx.Response(403, json={"message": "slow down"},
-                                    headers={"retry-after": "30"})
+    fake.fail_with = httpx.Response(
+        403, json={"message": "slow down"}, headers={"retry-after": "30"}
+    )
     with _client(fake) as gh, pytest.raises(RateLimitError) as info:
         gh.get_repo("acme", "widgets")
     assert info.value.retry_after == 30
@@ -172,9 +181,7 @@ def test_non_json_error_body():
         gh.get_repo("acme", "widgets")
 
 
-@pytest.mark.parametrize(
-    "exc", [httpx.ConnectError("boom"), httpx.ReadTimeout("slow")]
-)
+@pytest.mark.parametrize("exc", [httpx.ConnectError("boom"), httpx.ReadTimeout("slow")])
 def test_network_errors(exc):
     fake = FakeGitHub()
     fake.raise_exc = exc

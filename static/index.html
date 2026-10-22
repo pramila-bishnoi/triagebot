@@ -182,7 +182,7 @@
       margin: 26px 0 12px; align-items: end;
     }
     .filters label { margin: 0 0 5px; font-size: 0.74rem; }
-    .filters .f-search { grid-column: span 5; }
+    .filters .f-search { grid-column: span 3; }
     .filters select, .filters input { padding: 9px 11px; font-size: 0.88rem; border-radius: 10px; }
 
     .list-head { display: flex; align-items: center; justify-content: space-between; margin: 26px 4px 12px; gap: 12px; }
@@ -207,7 +207,39 @@
     details.why summary { cursor: pointer; color: var(--accent); font-weight: 600; width: fit-content; }
     details.why ul { margin: 4px 0 8px; padding-left: 18px; line-height: 1.5; }
     details.why b { color: var(--text); font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    details.dups { margin-top: 6px; font-size: 0.8rem; }
+    details.dups summary { cursor: pointer; color: #f59e0b; font-weight: 600; width: fit-content; }
+    .dup-note { color: var(--muted); font-size: 0.74rem; margin: 6px 0; }
+    .dup { border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; margin: 6px 0;
+           background: color-mix(in srgb, var(--panel-2) 60%, transparent); }
+    .dup.rejected { opacity: 0.6; }
+    .dup-head { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+    .dup ul { margin: 4px 0; padding-left: 18px; color: var(--muted); line-height: 1.45; }
+    .dup-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+    .dup-actions button { border: 1px solid var(--border); background: transparent; color: var(--text);
+                          border-radius: 8px; padding: 4px 10px; font-size: 0.76rem; cursor: pointer; }
+    .dup-actions button:hover { border-color: var(--accent); }
+    .dup-actions button:disabled { opacity: 0.5; cursor: progress; }
+    .src-confirmed { color: #ef4444; border-color: rgba(239,68,68,.45); }
+    .src-pending { color: #f59e0b; border-color: rgba(245,158,11,.45); }
 
+    .tiles { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; margin: 18px 0 6px; }
+    .tile { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 10px 12px;
+            text-align: left; cursor: pointer; color: var(--text); font: inherit; box-shadow: var(--card-shadow); }
+    .tile:hover, .tile.active { border-color: var(--accent); }
+    .tile b { display: block; font-size: 1.35rem; }
+    .tile span { font-size: 0.74rem; color: var(--muted); }
+    .pr-tools { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; margin-top: 10px; }
+    .pr-tools label { margin: 0 0 5px; font-size: 0.74rem; }
+    .pr-tools input { width: 90px; padding: 9px 11px; font-size: 0.88rem; border-radius: 10px; }
+    .src-github { color: #93c5fd; border-color: rgba(147,197,253,.45); }
+    .src-calculated { color: var(--muted); }
+    .flag-stale, .flag-changes_requested { color: #f59e0b; border-color: rgba(245,158,11,.45); }
+    .flag-large { color: #f87171; border-color: rgba(239,68,68,.45); }
+    .flag-awaiting_review, .flag-no_reviews { color: #c084fc; border-color: rgba(168,85,247,.45); }
+    .flag-approved { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
+    .st-merged { color: #a78bfa; font-weight: 600; } .st-open { color: var(--accent); font-weight: 600; }
+    .st-draft, .st-closed { color: var(--muted); font-weight: 600; }
     .pager { display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin-top: 14px;
              font-size: 0.85rem; color: var(--muted); }
 
@@ -236,8 +268,10 @@
     .src { display: inline-block; font-size: 0.68rem; font-weight: 700; padding: 1px 7px; border-radius: 6px;
            border: 1px solid var(--border); color: var(--muted); margin-top: 3px; letter-spacing: 0.02em; }
     .src-ml { color: #a5b4fc; border-color: rgba(129,140,248,.45); background: rgba(99,102,241,.10); }
-    .src-github_label { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
+    .src-github_label, .src-maintainer_label { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
     [data-theme="light"] .src-ml { color: #4f46e5; }
+    .src-fallback { color: #f59e0b; border-color: rgba(245,158,11,.45); }
+    .why-note { margin: 6px 0 0; font-size: 0.78rem; color: var(--muted); }
     .model-status { display: inline-flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 0.8rem;
                     color: var(--muted); padding: 6px 12px; border-radius: 999px;
                     background: var(--panel-2); border: 1px solid var(--border); max-width: 100%; }
@@ -277,8 +311,9 @@
 
     @media (max-width: 980px) {
       .filters { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-      .filters .f-search { grid-column: span 2; }
+      .filters .f-search { grid-column: 1 / -1; }
     }
+    @media (max-width: 980px) { .tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
     @media (max-width: 700px) {
       .import-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .import-row .f-repo, .import-row .btn { grid-column: 1 / -1; }
@@ -291,8 +326,8 @@
       .brand .sub, .brand .name { display: none; }
       .nav { padding: 10px 14px; gap: 8px; }
       .nav-pill { white-space: nowrap; }
-      .nav-links { margin-left: 0; }
-      .nav-pill { padding: 8px 11px; font-size: 0.84rem; }
+      .nav-links { margin-left: 0; flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+      .nav-pill { padding: 8px 10px; font-size: 0.82rem; white-space: nowrap; }
     }
   </style>
 </head>
@@ -310,6 +345,7 @@
     </div>
     <div class="nav-links" role="tablist">
       <button class="nav-pill active" data-view="items" role="tab">GitHub items</button>
+      <button class="nav-pill" data-view="prs" role="tab">PR insights</button>
       <button class="nav-pill" data-view="manual" role="tab">Manual triage</button>
     </div>
     <div class="nav-right">
@@ -347,7 +383,8 @@
         </div>
         <button class="btn" type="submit" id="importBtn">Import</button>
       </div>
-      <div class="hint">Fetches the most recently updated issues and PRs. Re-importing refreshes existing items.</div>
+      <div class="hint">Fetches the most recently updated issues and PRs. To catch items closed, reopened or
+        edited on GitHub later, choose the repository below and press <b>Sync with GitHub</b>.</div>
       <div id="importStatus" class="status" role="status" aria-live="polite" hidden></div>
     </form>
 
@@ -393,11 +430,21 @@
         <label for="fQ">Search</label>
         <input id="fQ" type="search" placeholder="Title, body or #number" maxlength="200" />
       </div>
+      <button class="btn ghost" type="button" id="syncRepo"
+              title="Fetch everything changed on GitHub since the last sync (open and closed)">Sync with GitHub</button>
+      <button class="btn ghost" type="button" id="refreshDups"
+              title="Re-run duplicate detection for the selected repository">Find duplicates</button>
       <button class="btn ghost" type="button" id="resetFilters">Reset</button>
     </div>
 
     <div id="itemsError" class="status err" role="alert" hidden></div>
+    <div id="dupStatus" class="status info" role="status" aria-live="polite" hidden></div>
     <div id="itemsEmpty" class="empty" hidden></div>
+    <div class="hint" id="itemsLegend">Every category and priority is a <b>suggestion</b> unless marked
+      <span class="src src-github_label">maintainer label</span> (set on GitHub).
+      <span class="src src-ml">ML n%</span> = the model's probability for its top category;
+      <span class="src">rules</span> = keyword rules decided (the model was unsure, unavailable, or the item is a PR).
+      Open “Why this suggestion?” for the evidence.</div>
     <div class="table-wrap" id="itemsTableWrap" hidden>
       <table>
         <thead>
@@ -420,6 +467,68 @@
   </main>
 
   <!-- ---------- Manual triage view (original feature) ---------- -->
+  <!-- ---------- PR insights view ---------- -->
+  <main id="view-prs" class="wrap" hidden>
+    <div class="hero">
+      <h1>Pull request insights</h1>
+      <p>Status, age, size and review activity of imported pull requests — every insight
+         says why. Read-only: nothing is changed on GitHub.</p>
+    </div>
+
+    <div class="filters" id="prFilters">
+      <div><label for="prRepo">Repository</label>
+        <select id="prRepo"><option value="">All repositories</option></select></div>
+      <div><label for="prStatus">Status</label>
+        <select id="prStatus"><option value="">All</option><option value="open">Open</option>
+          <option value="draft">Draft</option><option value="merged">Merged</option>
+          <option value="closed">Closed (not merged)</option></select></div>
+      <div><label for="prFlag">Insight</label>
+        <select id="prFlag"><option value="">Any</option><option value="awaiting_review">Awaiting review</option>
+          <option value="stale">Stale</option><option value="large">Large</option>
+          <option value="changes_requested">Changes requested</option><option value="approved">Approved</option>
+          <option value="no_reviews">No reviews yet</option><option value="draft">Draft</option></select></div>
+      <div><label for="prSize">Size</label>
+        <select id="prSize"><option value="">Any</option><option>XS</option><option>S</option><option>M</option>
+          <option>L</option><option>XL</option><option value="unknown">Not loaded</option></select></div>
+      <div><label for="prSort">Sort by</label>
+        <select id="prSort"><option value="updated">Last update</option><option value="idle">Longest idle</option>
+          <option value="age">Oldest</option><option value="size">Largest</option></select></div>
+      <div><label for="prAuthor">Author</label>
+        <input id="prAuthor" placeholder="login" maxlength="100" /></div>
+      <div class="f-search"><label for="prQ">Search</label>
+        <input id="prQ" type="search" placeholder="Title, body or #number" maxlength="200" /></div>
+      <button class="btn ghost" type="button" id="prReset">Reset</button>
+    </div>
+
+    <div class="pr-tools">
+      <div><label for="prDetailLimit">PRs to load</label>
+        <input id="prDetailLimit" type="number" min="1" max="50" value="10" /></div>
+      <button class="btn ghost" type="button" id="prLoadDetails"
+              title="Fetches line counts and reviews: 2 GitHub API requests per PR">Load size &amp; reviews</button>
+      <span class="hint" id="prThresholds"></span>
+    </div>
+    <div id="prStatusLine" class="status info" role="status" aria-live="polite" hidden></div>
+
+    <div class="tiles" id="prTiles"></div>
+    <div class="hint">Each insight is tagged <span class="src src-github">GitHub</span> (reported by GitHub)
+      or <span class="src src-calculated">calculated</span> (Calculated by TriageBot from GitHub data).</div>
+
+    <div id="prError" class="status err" role="alert" hidden></div>
+    <div id="prEmpty" class="empty" hidden></div>
+    <div class="table-wrap" id="prTableWrap" hidden>
+      <table>
+        <thead><tr><th>Pull request</th><th>Status</th><th>Activity</th><th>Size</th>
+          <th class="col-state">Reviews</th></tr></thead>
+        <tbody id="prBody"></tbody>
+      </table>
+    </div>
+    <div class="pager" id="prPager" hidden>
+      <span id="prPageInfo"></span>
+      <button class="btn ghost" type="button" id="prPrev">← Prev</button>
+      <button class="btn ghost" type="button" id="prNext">Next →</button>
+    </div>
+  </main>
+
   <main id="view-manual" class="wrap narrow" hidden>
     <div class="hero">
       <h1>Triage an issue by hand</h1>
@@ -507,9 +616,11 @@
         b.setAttribute("aria-selected", String(active));
       });
       $("view-items").hidden = view !== "items";
+      $("view-prs").hidden = view !== "prs";
       $("view-manual").hidden = view !== "manual";
       store.set("tb_view", view);
       if (view === "manual") refreshManual();
+      if (view === "prs") loadPrRepos().then(loadPrs);
     }
     document.querySelectorAll(".nav-pill").forEach((b) =>
       b.addEventListener("click", () => showView(b.dataset.view)));
@@ -552,6 +663,32 @@
       return `<span class="src src-${escapeHtml(source)}" title="${escapeHtml(SOURCE_TEXT[source] || "")}">${escapeHtml(text)}</span>`;
     }
 
+    const PRIORITY_SOURCE_TEXT = {
+      rules: "Suggested by the priority rules for human review (see “Why this suggestion?”)",
+      maintainer_label: "Set by a maintainer's priority label on GitHub (kept as-is)",
+    };
+    function prioritySourceChip(source) {
+      if (!source) return "";
+      const text = source === "maintainer_label" ? "maintainer label" : "suggested";
+      return `<span class="src src-${escapeHtml(source)}" title="${escapeHtml(PRIORITY_SOURCE_TEXT[source] || "")}">${text}</span>`;
+    }
+
+    // What the confidence word means depends on who decided the category.
+    const RULE_STRENGTH = { low: "weak", medium: "moderate", high: "strong" };
+    function confidenceText(it) {
+      if (it.category_source === "github_label") return "set on GitHub";
+      if (it.category_source === "ml") return `${it.category_confidence} confidence`;
+      return `${RULE_STRENGTH[it.category_confidence] || it.category_confidence} keyword evidence`;
+    }
+    // When the rules decided an issue although a model exists, say why (first reason line).
+    function fallbackChip(it) {
+      const first = (it.category_reasons || [])[0] || "";
+      if (it.category_source !== "rules" || !first.startsWith("rule engine used: ")) return "";
+      if (first.includes("trained on issues only")) return "";
+      const text = first.includes("ML was unsure") ? "ML unsure" : "ML unavailable";
+      return ` <span class="src src-fallback" title="${escapeHtml(first)}">${text}</span>`;
+    }
+
     function itemRow(it) {
       const labels = it.github_labels.map((l) => `<span class="badge gh-label">${escapeHtml(l)}</span>`).join("");
       const kind = it.kind === "pr" ? (it.is_draft ? "PR · draft" : "PR") : "Issue";
@@ -566,15 +703,23 @@
           <details class="why"><summary>Why this suggestion?</summary>
             <b>Category</b>${reasonsList(it.category_reasons)}
             <b>Priority</b>${reasonsList(it.priority_reasons)}
+            ${it.priority_source === "rules"
+              ? `<p class="why-note">A suggested priority comes from wording and labels only; it does not
+                 know the project's roadmap or users, so it is not a measure of real urgency.</p>` : ""}
           </details>
+          ${it.kind === "issue" && it.duplicate_count > 0
+            ? `<details class="dups" data-item="${it.id}"><summary>Potential duplicates (${it.duplicate_count})</summary>
+                 <div class="dup-list">Loading…</div></details>`
+            : ""}
         </td>
         <td class="nowrap">
           <span class="badge c-${escapeHtml(it.category)}">${escapeHtml(it.category)}</span>
-          <div class="conf">${escapeHtml(it.category_confidence)} confidence</div>
-          ${sourceChip(it.category_source, it.category_score)}
+          <div class="conf">${escapeHtml(confidenceText(it))}</div>
+          ${sourceChip(it.category_source, it.category_score)}${fallbackChip(it)}
           ${owner}
         </td>
-        <td><span class="badge p-${escapeHtml(it.priority)}">${escapeHtml(it.priority)}</span></td>
+        <td class="nowrap"><span class="badge p-${escapeHtml(it.priority)}">${escapeHtml(it.priority)}</span>
+          <div>${prioritySourceChip(it.priority_source)}</div></td>
         <td class="col-state"><span class="state-${escapeHtml(it.state)}">${escapeHtml(it.state)}</span></td>
         <td class="col-updated nowrap" title="${escapeHtml(it.updated_at)}">${escapeHtml(timeAgo(it.updated_at))}</td>
       </tr>`;
@@ -656,9 +801,11 @@
         const res = await postJson("/repos/import", { repo, state: $("importState").value, limit });
         const left = res.rate_limit_remaining == null ? "" :
           ` GitHub API requests left this hour: ${res.rate_limit_remaining}.`;
+        const dups = res.duplicates
+          ? ` Possible duplicates to review: ${res.duplicates.pending}.` : "";
         showStatus(status, "ok",
           `Imported ${res.fetched} items from ${res.repo.full_name} ` +
-          `(${res.issues} issues, ${res.pull_requests} PRs).${left}`);
+          `(${res.issues} issues, ${res.pull_requests} PRs).${dups}${left}`);
         offset = 0;
         await loadRepos(res.repo.full_name);
         loadItems();
@@ -685,6 +832,253 @@
     });
     $("prevPage").addEventListener("click", () => { offset = Math.max(0, offset - PAGE_SIZE); loadItems(); });
     $("nextPage").addEventListener("click", () => { offset += PAGE_SIZE; loadItems(); });
+
+    /* ---------- Potential duplicates ---------- */
+    function duplicateCard(s) {
+      const o = s.other;
+      const actions = s.status === "pending"
+        ? `<button data-dup="${s.id}" data-status="confirmed">Confirm duplicate</button>
+           <button data-dup="${s.id}" data-status="rejected">Not a duplicate</button>`
+        : `<button data-dup="${s.id}" data-status="pending">Undo (${escapeHtml(s.status)})</button>`;
+      return `<div class="dup ${escapeHtml(s.status)}">
+        <div class="dup-head">
+          <a class="item-title" href="${escapeHtml(safeUrl(o.html_url))}" target="_blank" rel="noopener noreferrer">#${o.number} ${escapeHtml(o.title)}</a>
+          <span class="src" title="Combined text similarity (0–1). Not a probability.">similarity ${s.score.toFixed(2)}</span>
+          <span class="src src-${escapeHtml(s.status)}">${escapeHtml(s.status)}</span>
+          <span class="conf">${escapeHtml(o.state)}</span>
+        </div>
+        ${reasonsList(s.explanation)}
+        <div class="dup-actions">${actions}</div>
+      </div>`;
+    }
+
+    async function loadDuplicates(panel) {
+      const list = panel.querySelector(".dup-list");
+      try {
+        const data = await api(`/items/${panel.dataset.item}/duplicates`);
+        const open = data.suggestions.filter((s) => s.status !== "rejected").length;
+        panel.querySelector("summary").textContent = `Potential duplicates (${open})`;
+        list.innerHTML =
+          `<div class="dup-note">Suggested because the texts are similar (threshold ${data.threshold.toFixed(2)}). ` +
+          `Please review: your decision is saved here only and nothing is changed on GitHub.</div>` +
+          (data.note ? `<div class="dup-note">${escapeHtml(data.note)}</div>` : "") +
+          (data.suggestions.length ? data.suggestions.map(duplicateCard).join("")
+                                   : `<div class="dup-note">No possible duplicates found.</div>`);
+      } catch (err) {
+        list.textContent = `Could not load duplicates: ${err.message}`;
+      }
+    }
+
+    // <details> "toggle" events do not bubble, so listen in the capture phase.
+    $("itemsBody").addEventListener("toggle", (e) => {
+      if (e.target.matches && e.target.matches("details.dups") && e.target.open) loadDuplicates(e.target);
+    }, true);
+    $("itemsBody").addEventListener("click", async (e) => {
+      const btn = e.target.closest && e.target.closest("button[data-dup]");
+      if (!btn) return;
+      const panel = btn.closest("details.dups");
+      btn.disabled = true;
+      try {
+        await postJson(`/duplicates/${btn.dataset.dup}`, { status: btn.dataset.status }, "PATCH");
+        await loadDuplicates(panel);
+      } catch (err) {
+        btn.disabled = false;
+        panel.querySelector(".dup-list").insertAdjacentHTML("afterbegin",
+          `<div class="dup-note" role="alert">Could not save: ${escapeHtml(err.message)}</div>`);
+      }
+    });
+    $("syncRepo").addEventListener("click", async () => {
+      const repo = $("fRepo").value;
+      if (!repo) return showStatus($("dupStatus"), "err", "Choose a repository first, then sync it.");
+      const btn = $("syncRepo");
+      btn.disabled = true;
+      showStatus($("dupStatus"), "info", `Fetching changes to ${repo} from GitHub…`);
+      try {
+        const r = await postJson("/repos/sync", { repo });
+        const changes = r.fetched === 0 ? "nothing changed"
+          : `${plural(r.updated, "item")} refreshed (${r.closed} closed, ${r.reopened} reopened), ${r.added} new`;
+        const more = r.complete ? "" : " More changes remain: sync again to continue.";
+        const left = r.rate_limit_remaining == null ? "" : ` GitHub API requests left this hour: ${r.rate_limit_remaining}.`;
+        showStatus($("dupStatus"), "info",
+          `Synced ${r.repo.full_name}: changes since ${r.since.replace("T", " ").replace("Z", " UTC")} checked — ${changes}.${more}${left}`);
+        loadRepos();
+        loadItems();
+      } catch (err) {
+        showStatus($("dupStatus"), "err", `Sync failed (nothing was changed): ${err.message}`);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+    $("refreshDups").addEventListener("click", async () => {
+      const repo = $("fRepo").value;
+      if (!repo) return showStatus($("dupStatus"), "err", "Choose a repository first, then re-check duplicates.");
+      const btn = $("refreshDups");
+      btn.disabled = true;
+      try {
+        const r = await postJson("/duplicates/refresh", { repo, force: true });
+        showStatus($("dupStatus"), "info",
+          `Duplicate check for ${r.repo}: ${r.pending} to review, ${r.confirmed} confirmed, ` +
+          `${r.rejected} rejected (${r.compared} of ${r.issues} issues compared; threshold ${r.threshold.toFixed(2)}).`);
+        loadItems();
+      } catch (err) {
+        showStatus($("dupStatus"), "err", `Duplicate check failed: ${err.message}`);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    /* ---------- PR insights ---------- */
+    let prOffset = 0;
+    let prSeq = 0;
+    const FLAG_TEXT = { draft: "draft", stale: "stale", awaiting_review: "awaiting review",
+      no_reviews: "no reviews yet", changes_requested: "changes requested", approved: "approved",
+      large: "large" };
+    const ago = (verb, d) => (d == null ? `${verb}: unknown` : d < 1 ? `${verb} today` : `${verb} ${Math.floor(d)} d ago`);
+
+    function prFlagChips(flags) {
+      return flags.map((f) => `<span class="src flag-${escapeHtml(f)}">${escapeHtml(FLAG_TEXT[f] || f)}</span>`).join(" ");
+    }
+
+    function prRow(pr) {
+      const branch = pr.head_ref ? `${escapeHtml(pr.head_ref)} → ${escapeHtml(pr.base_ref || "?")}` : "";
+      const size = pr.size
+        ? `<span class="badge kind">${escapeHtml(pr.size)}</span><div class="item-meta">+${pr.additions} / −${pr.deletions}` +
+          ` · ${plural(pr.changed_files ?? 0, "file")}</div>`
+        : `<span class="conf">not loaded</span>`;
+      const pending = pr.requested_reviewers == null ? null : pr.requested_reviewers + (pr.requested_teams || 0);
+      const reviews = [
+        pending == null ? "requests unknown" : `${pending} pending request${pending === 1 ? "" : "s"}`,
+        pr.reviews_total == null ? "reviews not loaded"
+          : `${pr.reviews_approved} approved · ${pr.reviews_changes_requested} changes requested`,
+      ].map((t) => `<div class="item-meta">${escapeHtml(t)}</div>`).join("");
+      const why = pr.insights.map((i) =>
+        `<li><b>${escapeHtml(i.title)}</b> <span class="src src-${escapeHtml(i.source)}">${i.source === "github" ? "GitHub" : "calculated"}</span> — ${escapeHtml(i.reason)}</li>`).join("");
+      return `<tr>
+        <td>
+          <a class="item-title" href="${escapeHtml(safeUrl(pr.html_url))}" target="_blank" rel="noopener noreferrer">#${pr.number} ${escapeHtml(pr.title)}</a>
+          <div class="item-meta">${escapeHtml(pr.repo)} · by ${escapeHtml(pr.author || "unknown")}${branch ? " · " + branch : ""}</div>
+          <div class="badges">${prFlagChips(pr.flags)}</div>
+          <details class="why"><summary>Why these insights?</summary><ul>${why}</ul></details>
+        </td>
+        <td class="nowrap"><span class="st-${escapeHtml(pr.status)}">${escapeHtml(pr.status)}</span></td>
+        <td class="nowrap"><div class="item-meta">${escapeHtml(ago("opened", pr.age_days))}</div>
+          <div class="item-meta">${escapeHtml(ago("updated", pr.idle_days))}</div></td>
+        <td class="nowrap">${size}</td>
+        <td class="col-state">${reviews}</td>
+      </tr>`;
+    }
+
+    function prParams() {
+      const params = new URLSearchParams();
+      const pairs = [["repo", "prRepo"], ["status", "prStatus"], ["flag", "prFlag"], ["size", "prSize"],
+                     ["sort", "prSort"], ["author", "prAuthor"], ["q", "prQ"]];
+      for (const [k, id] of pairs) {
+        const v = $(id).value.trim();
+        if (v) params.set(k, v);
+      }
+      params.set("limit", PAGE_SIZE);
+      params.set("offset", prOffset);
+      return params;
+    }
+
+    function renderTiles(s, activeFlag) {
+      const tiles = [["", s.open, "open"], ["awaiting_review", s.awaiting_review, "awaiting review"],
+        ["stale", s.stale, "stale"], ["large", s.large, "large"], ["draft", s.draft, "drafts"]];
+      $("prTiles").innerHTML = tiles.map(([flag, n, label]) =>
+        `<button class="tile ${activeFlag === flag && flag ? "active" : ""}" type="button" data-flag="${flag}">` +
+        `<b>${n}</b><span>${label}</span></button>`).join("") +
+        `<div class="tile" title="PRs whose size and reviews have been loaded"><b>${s.with_details}/${s.total}</b>` +
+        `<span>size &amp; reviews loaded</span></div>`;
+    }
+
+    async function loadPrs() {
+      const seq = ++prSeq;
+      try {
+        const page = await api(`/prs?${prParams()}`);
+        if (seq !== prSeq) return;
+        $("prError").hidden = true;
+        const t = page.thresholds;
+        $("prThresholds").textContent = `Stale = open with no activity for ≥ ${t.stale_days} days · ` +
+          `Large = ≥ ${t.large_lines} lines or ≥ ${t.large_files} files changed`;
+        renderTiles(page.summary, $("prFlag").value);
+        const empty = page.items.length === 0;
+        $("prTableWrap").hidden = empty;
+        $("prPager").hidden = empty;
+        $("prEmpty").hidden = !empty;
+        if (empty) {
+          $("prEmpty").textContent = page.summary.total
+            ? "No pull requests match these filters."
+            : "No pull requests yet. Import a repository in “GitHub items” first.";
+          return;
+        }
+        $("prBody").innerHTML = page.items.map(prRow).join("");
+        const end = page.offset + page.items.length;
+        $("prPageInfo").textContent = `Showing ${page.offset + 1}–${end} of ${page.total}`;
+        $("prPrev").disabled = page.offset === 0;
+        $("prNext").disabled = end >= page.total;
+      } catch (err) {
+        if (seq !== prSeq) return;
+        showStatus($("prError"), "err", `Could not load pull requests: ${err.message}`);
+      }
+    }
+
+    async function loadPrRepos() {
+      try {
+        const repos = await api("/repos");
+        const current = $("prRepo").value || $("fRepo").value;
+        $("prRepo").innerHTML = '<option value="">All repositories</option>' + repos.map((r) =>
+          `<option value="${escapeHtml(r.full_name)}">${escapeHtml(r.full_name)}</option>`).join("");
+        $("prRepo").value = repos.some((r) => r.full_name === current) ? current : "";
+      } catch (err) {
+        showStatus($("prError"), "err", `Could not load repositories: ${err.message}`);
+      }
+    }
+
+    const onPrFilter = () => { prOffset = 0; loadPrs(); };
+    ["prRepo", "prStatus", "prFlag", "prSize", "prSort"].forEach((id) => $(id).addEventListener("change", onPrFilter));
+    let prTimer;
+    ["prAuthor", "prQ"].forEach((id) => $(id).addEventListener("input", () => {
+      clearTimeout(prTimer);
+      prTimer = setTimeout(onPrFilter, 250);
+    }));
+    $("prReset").addEventListener("click", () => {
+      ["prStatus", "prFlag", "prSize", "prAuthor", "prQ"].forEach((id) => { $(id).value = ""; });
+      $("prSort").value = "updated";
+      onPrFilter();
+    });
+    $("prTiles").addEventListener("click", (e) => {
+      const tile = e.target.closest && e.target.closest("button[data-flag]");
+      if (!tile) return;
+      $("prFlag").value = $("prFlag").value === tile.dataset.flag ? "" : tile.dataset.flag;
+      if (!tile.dataset.flag) $("prStatus").value = "open";
+      onPrFilter();
+    });
+    $("prPrev").addEventListener("click", () => { prOffset = Math.max(0, prOffset - PAGE_SIZE); loadPrs(); });
+    $("prNext").addEventListener("click", () => { prOffset += PAGE_SIZE; loadPrs(); });
+    $("prLoadDetails").addEventListener("click", async () => {
+      const repo = $("prRepo").value;
+      const limit = Number($("prDetailLimit").value);
+      const line = $("prStatusLine");
+      if (!repo) return showStatus(line, "err", "Choose a repository first.");
+      if (!Number.isInteger(limit) || limit < 1 || limit > 50) {
+        return showStatus(line, "err", "PRs to load must be a whole number from 1 to 50.");
+      }
+      const btn = $("prLoadDetails");
+      btn.disabled = true;
+      showStatus(line, "info", `Loading size and reviews for up to ${limit} open PRs (2 GitHub requests each)…`);
+      try {
+        const r = await postJson("/prs/details", { repo, limit });
+        const left = r.rate_limit_remaining == null ? "" : ` GitHub requests left: ${r.rate_limit_remaining}.`;
+        showStatus(line, r.stopped_by_rate_limit ? "err" : "ok",
+          `Loaded ${r.fetched} PR(s); ${r.up_to_date} already current; ${r.failed} failed.` +
+          (r.stopped_by_rate_limit ? ` Stopped: ${r.message}` : "") + left);
+        loadPrs();
+      } catch (err) {
+        showStatus(line, "err", `Could not load PR details: ${err.message}`);
+      } finally {
+        btn.disabled = false;
+      }
+    });
 
     /* ---------- Manual triage (original feature) ---------- */
     function badges(x) {
@@ -746,9 +1140,14 @@
             `${sourceChip(res.category_source, res.category_score)}` +
             `<span class="cat-reasons">${res.category_reasons.map(escapeHtml).join(" · ")}</span>`
           : "";
+        const priority = res.priority
+          ? `<b>Suggested priority:</b> <span class="badge p-${escapeHtml(res.priority)}">${escapeHtml(res.priority)}</span>` +
+            `${prioritySourceChip(res.priority_source)}` +
+            `<span class="cat-reasons">${res.priority_reasons.map(escapeHtml).join(" · ")}</span>`
+          : "";
         $("preview").innerHTML =
           `<b>Suggestion:</b> ${badges(res)}<br/><span style="opacity:.85">${escapeHtml(res.reason)}</span>` +
-          category;
+          category + (priority && !category ? "<br/>" : "") + priority;
       } catch (err) {
         if (seq !== previewSeq) return;
         $("preview").textContent = `Preview unavailable: ${err.message}`;
@@ -801,7 +1200,7 @@
     /* ---------- Start ---------- */
     loadModelStatus();
     loadRepos().then(loadItems);
-    showView(store.get("tb_view") === "manual" ? "manual" : "items");
+    showView(["manual", "prs"].includes(store.get("tb_view")) ? store.get("tb_view") : "items");
   </script>
 </body>
 </html>

@@ -10,13 +10,18 @@ from tests.github_fakes import make_issue, make_pr
 
 @pytest.fixture()
 def widgets(fake_github):
-    fake_github.add_repo("acme/widgets", [
-        make_issue("App crashes on save", "Traceback attached", number=1, labels=["bug"]),
-        make_issue("Fix typo in README", number=2, state="closed"),
-        make_issue("How do I configure the proxy?", number=3),
-        make_pr("feat: add CSV export", number=4),
-        make_pr("docs: clarify install steps", number=5, draft=True),
-    ])
+    fake_github.add_repo(
+        "acme/widgets",
+        [
+            make_issue(
+                "App crashes on save for all users", "Traceback attached", number=1, labels=["bug"]
+            ),
+            make_issue("Fix typo in README", number=2, state="closed"),
+            make_issue("How do I configure the proxy?", number=3),
+            make_pr("feat: add CSV export", number=4),
+            make_pr("docs: clarify install steps", number=5, draft=True),
+        ],
+    )
     return fake_github
 
 
@@ -98,8 +103,15 @@ def test_item_pagination(client, widgets):
 
 @pytest.mark.parametrize(
     "params",
-    [{"type": "commit"}, {"category": "chore"}, {"priority": "urgent"},
-     {"state": "merged"}, {"limit": 0}, {"limit": 1000}, {"offset": -1}],
+    [
+        {"type": "commit"},
+        {"category": "chore"},
+        {"priority": "urgent"},
+        {"state": "merged"},
+        {"limit": 0},
+        {"limit": 1000},
+        {"offset": -1},
+    ],
 )
 def test_invalid_item_filters_return_422(client, params):
     assert client.get("/items", params=params).status_code == 422
@@ -107,8 +119,13 @@ def test_invalid_item_filters_return_422(client, params):
 
 @pytest.mark.parametrize(
     "body",
-    [{"repo": "not a repo"}, {"repo": "a/b", "limit": 0}, {"repo": "a/b", "limit": 501},
-     {"repo": "a/b", "state": "merged"}, {}],
+    [
+        {"repo": "not a repo"},
+        {"repo": "a/b", "limit": 0},
+        {"repo": "a/b", "limit": 501},
+        {"repo": "a/b", "state": "merged"},
+        {},
+    ],
 )
 def test_invalid_import_request_returns_422(client, fake_github, body):
     assert client.post("/repos/import", json=body).status_code == 422
@@ -130,7 +147,8 @@ def test_import_private_repo_returns_404(client, fake_github):
 
 def test_rate_limit_returns_429_with_retry_after(client, fake_github):
     fake_github.fail_with = httpx.Response(
-        403, json={"message": "API rate limit exceeded"},
+        403,
+        json={"message": "API rate limit exceeded"},
         headers={"x-ratelimit-remaining": "0", "x-ratelimit-reset": "4102444800"},
     )
     resp = _import(client)

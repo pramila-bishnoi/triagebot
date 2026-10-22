@@ -1,7 +1,7 @@
 [project]
 name = "triagebot"
 version = "1.0.0"
-description = "TriageBot - an incoming-issue triage assistant that suggests severity, labels, and likely owners."
+description = "TriageBot - a read-only GitHub issue & PR triage dashboard: ML/rule categories, explainable priority, duplicate suggestions and PR insights."
 requires-python = ">=3.11"
 readme = "README.md"
 
