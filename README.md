@@ -13,12 +13,14 @@ deterministic scorer that keeps maintainers' own priority labels. It runs
 offline with **no paid AI services**, and every suggestion shows where it came
 from and why.
 
-**Status:** a working local application with a 543-test suite, run on
-Python 3.11 and 3.14. It is **not deployed**: there is no public URL. It is
-also **not production-ready**: there are no user accounts, no
-authentication and no rate limiting (see
-[Security and limitations](#limitations)). The verification commands and
-limitations are documented in [Testing & verification](#testing--verification).
+**Status:** A deployed demonstration application is available on Render.
+The project has a 543-test suite, with tests run locally on Python 3.11
+and 3.14.
+
+**Live Demo:** https://triagebot-cx2g.onrender.com/
+
+**Note:** This is a demonstration deployment, not a production-ready
+service. See [Limitations](#limitations) for details.
 
 ## Screenshots
 
@@ -863,18 +865,18 @@ latest local changes, which are uncommitted, so no CI result is claimed here.
 
 ## Deployment
 
-**Not deployed.** The project has no public instance.
-[`render.yaml`](render.yaml) is a Render Blueprint inherited from the starter
-project. It describes a free web service (`pip install -r requirements.txt`,
-then `uvicorn app.main:app`). It has **not** been tested with the current
-code. If you deploy it:
+TriageBot is deployed as a demonstration application on Render.
 
-- set `GITHUB_TOKEN` in the hosting dashboard, never in the file;
-- expect the free plan's filesystem to be temporary, so the SQLite data would
-  reset on every redeploy;
-- note that the app has **no authentication**: anyone with the URL could
-  import repositories, record duplicate decisions and delete manual issues.
-  Add authentication first.
+- **Live Demo:** https://triagebot-cx2g.onrender.com/
+- **Hosting:** Render
+- **Backend:** FastAPI
+- **Application Server:** Uvicorn
+
+The deployed application provides a web dashboard for importing public
+GitHub repositories and exploring issue triage and pull-request insights.
+
+**Note:** This deployment is intended for demonstration and evaluation.
+It is not a production-ready service.
 
 ## Limitations
 
